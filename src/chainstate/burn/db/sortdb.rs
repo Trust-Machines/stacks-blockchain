@@ -743,6 +743,7 @@ const SORTITION_DB_SCHEMA_6: &'static [&'static str] = &[r#"
 const SORTITION_DB_SCHEMA_7: &'static [&'static str] = &[r#"
      DELETE FROM epochs;"#];
 
+// TODO(3493): Add peg out tables
 const SORTITION_DB_SCHEMA_8: &'static [&'static str] = &[r#"
     CREATE TABLE peg_in (
         txid TEXT NOT NULL,
@@ -4083,6 +4084,8 @@ impl SortitionDB {
         )
     }
 
+    // TODO(3493): Query functions for peg out request and peg out fulfill
+
     /// Get the list of Transfer-STX operations processed in a given burnchain block.
     /// This will be the same list in each PoX fork; it's up to the Stacks block-processing logic
     /// to reject them.
@@ -4949,6 +4952,20 @@ impl<'a> SortitionHandleTx<'a> {
                     op.block_height, &op.txid, op.block_height, op.vtxindex
                 );
                 self.insert_peg_in_sbtc(op)
+            }
+            BlockstackOperationType::PegOutRequest(ref op) => {
+                info!(
+                    "ACCEPTED({}) sBTC peg out request opt {} at {},{}",
+                    op.block_height, &op.txid, op.block_height, op.vtxindex
+                );
+                todo!(); // TODO(3493): Add insertion logic
+            }
+            BlockstackOperationType::PegOutFulfill(ref op) => {
+                info!(
+                    "ACCEPTED({}) sBTC peg out fulfill op {} at {},{}",
+                    op.block_height, &op.txid, op.block_height, op.vtxindex
+                );
+                todo!(); // TODO(3493): Add insertion logic
             }
         }
     }
