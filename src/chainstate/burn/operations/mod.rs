@@ -13,7 +13,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+use serde::Deserialize;
 use std::convert::From;
 use std::convert::TryInto;
 use std::error;
@@ -316,6 +316,18 @@ pub struct DelegateStxOp {
     pub burn_header_hash: BurnchainHeaderHash, // hash of the burn chain block header
 }
 
+fn hex_serialize<S: serde::Serializer>(bhh: &BurnchainHeaderHash, s: S) -> Result<S::Ok, S::Error> {
+    let inst = bhh.to_hex();
+    s.serialize_str(inst.as_str())
+}
+
+fn hex_deserialize<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> Result<BurnchainHeaderHash, D::Error> {
+    let inst_str = String::deserialize(d)?;
+    BurnchainHeaderHash::from_hex(&inst_str).map_err(serde::de::Error::custom)
+}
+
 #[derive(Debug, PartialEq, Clone, Eq, Serialize, Deserialize)]
 pub struct PegInOp {
     pub recipient: PrincipalData,
@@ -324,9 +336,10 @@ pub struct PegInOp {
     pub memo: Vec<u8>, // extra unused bytes
 
     // common to all transactions
-    pub txid: Txid,                            // transaction ID
-    pub vtxindex: u32,                         // index in the block where this tx occurs
-    pub block_height: u64,                     // block height at which this tx occurs
+    pub txid: Txid,        // transaction ID
+    pub vtxindex: u32,     // index in the block where this tx occurs
+    pub block_height: u64, // block height at which this tx occurs
+    #[serde(deserialize_with = "hex_deserialize", serialize_with = "hex_serialize")]
     pub burn_header_hash: BurnchainHeaderHash, // hash of the burn chain block header
 }
 
