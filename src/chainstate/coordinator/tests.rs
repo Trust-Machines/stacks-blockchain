@@ -3342,6 +3342,12 @@ fn test_sbtc_ops() {
     let first_peg_in_memo = vec![1, 3, 3, 7];
     let second_peg_in_memo = vec![4, 2];
 
+    let first_peg_out_request_memo = vec![1, 3, 3, 8];
+    let second_peg_out_request_memo = vec![4, 3];
+
+    let first_peg_out_fulfill_memo = vec![1, 3, 3, 8];
+    let second_peg_out_fulfill_memo = vec![4, 3];
+
     for ix in 0..vrf_keys.len() {
         let vrf_key = &vrf_keys[ix];
         let miner = &committers[ix];
@@ -3435,6 +3441,7 @@ fn test_sbtc_ops() {
                     recipient: recipient_btc_address,
                     signature: MessageSignature([0; 65]),
                     amount: 0,
+                    memo: first_peg_out_request_memo.clone(),
                     txid: next_txid(),
                     vtxindex: 5,
                     block_height: 0,
@@ -3448,6 +3455,7 @@ fn test_sbtc_ops() {
                     signature: MessageSignature([0; 65]),
                     amount: 5,
                     txid: next_txid(),
+                    memo: second_peg_out_request_memo.clone(),
                     vtxindex: 8,
                     block_height: 0,
                     burn_header_hash: BurnchainHeaderHash([0; 32]),
@@ -3459,6 +3467,7 @@ fn test_sbtc_ops() {
                     recipient: recipient_btc_address,
                     amount: 3,
                     chain_tip,
+                    memo: first_peg_out_fulfill_memo.clone(),
                     txid: next_txid(),
                     vtxindex: 6,
                     block_height: 0,
@@ -3471,6 +3480,7 @@ fn test_sbtc_ops() {
                     recipient: recipient_btc_address,
                     amount: 2,
                     chain_tip,
+                    memo: second_peg_out_fulfill_memo.clone(),
                     txid: next_txid(),
                     vtxindex: 7,
                     block_height: 0,
@@ -3534,8 +3544,13 @@ fn test_sbtc_ops() {
 
     assert_eq!(peg_in_ops.len(), 1);
     assert_eq!(peg_in_ops[0].memo, first_peg_in_memo);
+
     assert_eq!(peg_out_request_ops.len(), 1);
-    assert_eq!(peg_out_fulfill_ops.len(), 2); // TODO(3493): Test that these are the expected ops
+    assert_eq!(peg_out_request_ops[0].memo, second_peg_out_request_memo);
+
+    assert_eq!(peg_out_fulfill_ops.len(), 2);
+    assert_eq!(peg_out_fulfill_ops[0].memo, first_peg_out_fulfill_memo);
+    assert_eq!(peg_out_fulfill_ops[1].memo, second_peg_out_fulfill_memo);
 }
 
 // This helper function retrieves the delegation info from the delegate address
