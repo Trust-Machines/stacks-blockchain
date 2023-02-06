@@ -734,8 +734,6 @@ const SORTITION_DB_SCHEMA_4: &'static [&'static str] = &[
     );"#,
 ];
 
-/// The changes for version five *just* replace the existing epochs table
-///  by deleting all the current entries and inserting the new epochs definition.
 const SORTITION_DB_SCHEMA_5: &'static [&'static str] = &[r#"
      DELETE FROM epochs;"#];
 
