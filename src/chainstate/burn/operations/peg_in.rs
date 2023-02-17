@@ -324,16 +324,19 @@ mod tests {
         let mut rng = seeded_rng();
         let opcode = Opcodes::PegIn;
 
-        let contract_name = "Mårten_is_not_a_valid_smart_contract_name";
+        let contract_name = "Mårten_is_not_a_valid_contract_name";
         let peg_wallet_address = random_bytes(&mut rng);
         let amount = 10;
         let output2 = Output2Data::new_as_option(amount, peg_wallet_address);
+        let memo: [u8; 6] = random_bytes(&mut rng);
 
         let mut data = vec![1];
         let addr_bytes = random_bytes(&mut rng);
         let stx_address = StacksAddress::new(1, addr_bytes.into());
         data.extend_from_slice(&addr_bytes);
         data.extend_from_slice(contract_name.as_bytes());
+        data.extend_from_slice(&[0; 4]); // Padding contract name
+        data.extend_from_slice(&memo);
 
         let tx = burnchain_transaction(data, output2, opcode);
         let header = burnchain_block_header();
