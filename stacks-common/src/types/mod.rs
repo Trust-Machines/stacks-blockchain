@@ -71,11 +71,12 @@ pub enum StacksEpochId {
     Epoch20 = 0x02000,
     Epoch2_05 = 0x02005,
     Epoch21 = 0x0200a,
+    Epoch22 = 0x0200f,
 }
 
 impl StacksEpochId {
     pub fn latest() -> StacksEpochId {
-        StacksEpochId::Epoch21
+        StacksEpochId::Epoch22
     }
 }
 
@@ -86,6 +87,7 @@ impl std::fmt::Display for StacksEpochId {
             StacksEpochId::Epoch20 => write!(f, "2.0"),
             StacksEpochId::Epoch2_05 => write!(f, "2.05"),
             StacksEpochId::Epoch21 => write!(f, "2.1"),
+            StacksEpochId::Epoch22 => write!(f, "2.2"),
         }
     }
 }
@@ -99,6 +101,7 @@ impl TryFrom<u32> for StacksEpochId {
             x if x == StacksEpochId::Epoch20 as u32 => Ok(StacksEpochId::Epoch20),
             x if x == StacksEpochId::Epoch2_05 as u32 => Ok(StacksEpochId::Epoch2_05),
             x if x == StacksEpochId::Epoch21 as u32 => Ok(StacksEpochId::Epoch21),
+            x if x == StacksEpochId::Epoch22 as u32 => Ok(StacksEpochId::Epoch22),
             _ => Err("Invalid epoch"),
         }
     }

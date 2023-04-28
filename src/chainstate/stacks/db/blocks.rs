@@ -3704,13 +3704,18 @@ impl StacksChainState {
         Ok(count - to_write)
     }
 
-    /// Check whether or not there exists a Stacks block at or higher than a given height that is
-    /// unprocessed.  This is used by miners to determine whether or not the block-commit they're
-    /// about to send is about to be invalidated
-    pub fn has_higher_unprocessed_blocks(conn: &DBConn, height: u64) -> Result<bool, Error> {
+    /// Check whether or not there exists a Stacks block at or higher
+    /// than a given height that is unprocessed and relatively
+    /// new. This is used by miners to determine whether or not the
+    /// block-commit they're about to send is about to be invalidated.
+    pub fn has_higher_unprocessed_blocks(
+        conn: &DBConn,
+        height: u64,
+        deadline: u64,
+    ) -> Result<bool, Error> {
         let sql =
-            "SELECT 1 FROM staging_blocks WHERE orphaned = 0 AND processed = 0 AND height >= ?1";
-        let args: &[&dyn ToSql] = &[&u64_to_sql(height)?];
+            "SELECT 1 FROM staging_blocks WHERE orphaned = 0 AND processed = 0 AND height >= ?1 AND arrival_time >= ?2";
+        let args: &[&dyn ToSql] = &[&u64_to_sql(height)?, &u64_to_sql(deadline)?];
         let res = conn
             .query_row(sql, args, |_r| Ok(()))
             .optional()
@@ -3720,10 +3725,13 @@ impl StacksChainState {
 
     /// Get the metadata of the highest unprocessed block.
     /// The block data will not be returned
-    pub fn get_highest_unprocessed_block(conn: &DBConn) -> Result<Option<StagingBlock>, Error> {
+    pub fn get_highest_unprocessed_block(
+        conn: &DBConn,
+        deadline: u64,
+    ) -> Result<Option<StagingBlock>, Error> {
         let sql =
-            "SELECT * FROM staging_blocks WHERE orphaned = 0 AND processed = 0 ORDER BY height DESC LIMIT 1";
-        let res = query_row(conn, sql, NO_PARAMS)?;
+            "SELECT * FROM staging_blocks WHERE orphaned = 0 AND processed = 0 AND arrival_time >= ?1 ORDER BY height DESC LIMIT 1";
+        let res = query_row(conn, sql, &[u64_to_sql(deadline)?])?;
         Ok(res)
     }
 
@@ -4878,21 +4886,41 @@ impl StacksChainState {
                             receipts.append(&mut clarity_tx.block.initialize_epoch_2_1()?);
                             applied = true;
                         }
+                        StacksEpochId::Epoch22 => {
+                            receipts.push(clarity_tx.block.initialize_epoch_2_05()?);
+                            receipts.append(&mut clarity_tx.block.initialize_epoch_2_1()?);
+                            receipts.append(&mut clarity_tx.block.initialize_epoch_2_2()?);
+                            applied = true;
+                        }
                         _ => {
                             panic!("Bad Stacks epoch transition; parent_epoch = {}, current_epoch = {}", &stacks_parent_epoch, &sortition_epoch.epoch_id);
                         }
                     },
-                    StacksEpochId::Epoch2_05 => {
+                    StacksEpochId::Epoch2_05 => match sortition_epoch.epoch_id {
+                        StacksEpochId::Epoch21 => {
+                            receipts.append(&mut clarity_tx.block.initialize_epoch_2_1()?);
+                            applied = true;
+                        }
+                        StacksEpochId::Epoch22 => {
+                            receipts.append(&mut clarity_tx.block.initialize_epoch_2_1()?);
+                            receipts.append(&mut clarity_tx.block.initialize_epoch_2_2()?);
+                            applied = true;
+                        }
+                        _ => {
+                            panic!("Bad Stacks epoch transition; parent_epoch = {}, current_epoch = {}", &stacks_parent_epoch, &sortition_epoch.epoch_id);
+                        }
+                    },
+                    StacksEpochId::Epoch21 => {
                         assert_eq!(
                             sortition_epoch.epoch_id,
-                            StacksEpochId::Epoch21,
-                            "Should only transition from Epoch2_05 to Epoch21"
+                            StacksEpochId::Epoch22,
+                            "Should only transition from Epoch21 to Epoch22"
                         );
-                        receipts.append(&mut clarity_tx.block.initialize_epoch_2_1()?);
+                        receipts.append(&mut clarity_tx.block.initialize_epoch_2_2()?);
                         applied = true;
                     }
-                    StacksEpochId::Epoch21 => {
-                        panic!("No defined transition from Epoch21 forward")
+                    StacksEpochId::Epoch22 => {
+                        panic!("No defined transition from Epoch22 forward")
                     }
                 }
             }
@@ -5479,7 +5507,7 @@ impl StacksChainState {
                 // The DelegateStx bitcoin wire format does not exist before Epoch 2.1.
                 Ok((stack_ops, transfer_ops, vec![]))
             }
-            StacksEpochId::Epoch21 => {
+            StacksEpochId::Epoch21 | StacksEpochId::Epoch22 => {
                 StacksChainState::get_stacking_and_transfer_and_delegate_burn_ops_v210(
                     chainstate_tx,
                     parent_index_hash,
@@ -6975,6 +7003,7 @@ impl StacksChainState {
     /// unconfirmed microblock stream trailing off of it.
     pub fn will_admit_mempool_tx(
         &mut self,
+        burn_state_db: &dyn BurnStateDB,
         current_consensus_hash: &ConsensusHash,
         current_block: &BlockHeaderHash,
         tx: &StacksTransaction,
@@ -7019,7 +7048,7 @@ impl StacksChainState {
 
         let current_tip =
             StacksChainState::get_parent_index_block(current_consensus_hash, current_block);
-        let res = match self.with_read_only_clarity_tx(&NULL_BURN_STATE_DB, &current_tip, |conn| {
+        let res = match self.with_read_only_clarity_tx(burn_state_db, &current_tip, |conn| {
             StacksChainState::can_include_tx(conn, &conf, has_microblock_pubk, tx, tx_size)
         }) {
             Some(r) => r,
@@ -7039,7 +7068,7 @@ impl StacksChainState {
                 {
                     debug!("Transaction {} is unminable in the confirmed chain tip due to nonce {} != {}; trying the unconfirmed chain tip",
                            &tx.txid(), mismatch_error.expected, mismatch_error.actual);
-                    self.with_read_only_unconfirmed_clarity_tx(&NULL_BURN_STATE_DB, |conn| {
+                    self.with_read_only_unconfirmed_clarity_tx(burn_state_db, |conn| {
                         StacksChainState::can_include_tx(
                             conn,
                             &conf,
@@ -7137,11 +7166,12 @@ impl StacksChainState {
             return Err(MemPoolRejection::BadAddressVersionByte);
         }
 
-        let (block_height, v1_unlock_height) =
-            clarity_connection.with_clarity_db_readonly(|ref mut db| {
+        let (block_height, v1_unlock_height, v2_unlock_height) = clarity_connection
+            .with_clarity_db_readonly(|ref mut db| {
                 (
                     db.get_current_burnchain_block_height() as u64,
                     db.get_v1_unlock_height(),
+                    db.get_v2_unlock_height(),
                 )
             });
 
@@ -7150,6 +7180,7 @@ impl StacksChainState {
             fee as u128,
             block_height,
             v1_unlock_height,
+            v2_unlock_height,
         ) {
             match &tx.payload {
                 TransactionPayload::TokenTransfer(..) => {
@@ -7158,9 +7189,11 @@ impl StacksChainState {
                 _ => {
                     return Err(MemPoolRejection::NotEnoughFunds(
                         fee as u128,
-                        payer
-                            .stx_balance
-                            .get_available_balance_at_burn_block(block_height, v1_unlock_height),
+                        payer.stx_balance.get_available_balance_at_burn_block(
+                            block_height,
+                            v1_unlock_height,
+                            v2_unlock_height,
+                        ),
                     ));
                 }
             }
@@ -7183,12 +7216,15 @@ impl StacksChainState {
                     total_spent,
                     block_height,
                     v1_unlock_height,
+                    v2_unlock_height,
                 ) {
                     return Err(MemPoolRejection::NotEnoughFunds(
                         total_spent,
-                        origin
-                            .stx_balance
-                            .get_available_balance_at_burn_block(block_height, v1_unlock_height),
+                        origin.stx_balance.get_available_balance_at_burn_block(
+                            block_height,
+                            v1_unlock_height,
+                            v2_unlock_height,
+                        ),
                     ));
                 }
 
@@ -7198,12 +7234,14 @@ impl StacksChainState {
                         fee as u128,
                         block_height,
                         v1_unlock_height,
+                        v2_unlock_height,
                     ) {
                         return Err(MemPoolRejection::NotEnoughFunds(
                             fee as u128,
                             payer.stx_balance.get_available_balance_at_burn_block(
                                 block_height,
                                 v1_unlock_height,
+                                v2_unlock_height,
                             ),
                         ));
                     }
