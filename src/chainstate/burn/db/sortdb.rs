@@ -818,7 +818,7 @@ const SORTITION_DB_SCHEMA_6: &'static [&'static str] = &[r#"
 // update this to add new indexes
 const LAST_SORTITION_DB_INDEX: &'static str = "index_peg_out_fulfill_burn_header_hash ";
 
-const SORTITION_DB_SCHEMA_6: &'static [&'static str] = &[
+const SORTITION_DB_SCHEMA_7: &'static [&'static str] = &[
     r#"
     CREATE TABLE peg_in (
         txid TEXT NOT NULL,
@@ -3151,7 +3151,7 @@ impl SortitionDB {
     }
 
     fn apply_schema_7(tx: &DBTx) -> Result<(), db_error> {
-        for sql_exec in SORTITION_DB_SCHEMA_6 {
+        for sql_exec in SORTITION_DB_SCHEMA_7 {
             tx.execute_batch(sql_exec)?;
         }
 
