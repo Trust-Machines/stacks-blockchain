@@ -51,11 +51,11 @@ use crate::vm::errors::{
     RuntimeErrorType,
 };
 use crate::vm::representations::ClarityName;
-use crate::vm::types::byte_len_of_serialization;
 use crate::vm::types::{
-    serialization::NONE_SERIALIZATION_LEN, OptionalData, PrincipalData,
-    QualifiedContractIdentifier, SequenceData, StandardPrincipalData, TupleData,
-    TupleTypeSignature, TypeSignature, Value, NONE,
+    byte_len_of_serialization,
+    serialization::{SerializationError, NONE_SERIALIZATION_LEN},
+    OptionalData, PrincipalData, QualifiedContractIdentifier, SequenceData, StandardPrincipalData,
+    TupleData, TupleTypeSignature, TypeSignature, Value, NONE,
 };
 
 pub const STORE_CONTRACT_SRC_INTERFACE: bool = true;
@@ -466,8 +466,14 @@ impl<'a> ClarityDatabase<'a> {
         self.store.get::<T>(key)
     }
 
-    pub fn get_value(&mut self, key: &str, expected: &TypeSignature) -> Option<ValueResult> {
-        self.store.get_value(key, expected)
+    pub fn get_value(
+        &mut self,
+        key: &str,
+        expected: &TypeSignature,
+    ) -> Result<Option<ValueResult>> {
+        self.store
+            .get_value(key, expected)
+            .map_err(|e| InterpreterError::DBError(e.to_string()).into())
     }
 
     pub fn get_with_proof<T>(&mut self, key: &str) -> Option<(T, Vec<u8>)>
@@ -690,6 +696,7 @@ impl<'a> ClarityDatabase<'a> {
             ClarityDatabase::ustx_liquid_supply_key(),
             &TypeSignature::UIntType,
         )
+        .expect("FATAL: failed to load ustx_liquid_supply Clarity key")
         .map(|v| v.value.expect_u128())
         .unwrap_or(0)
     }
@@ -1146,7 +1153,7 @@ impl<'a> ClarityDatabase<'a> {
             variable_name,
         );
 
-        let result = self.get_value(&key, &variable_descriptor.value_type);
+        let result = self.get_value(&key, &variable_descriptor.value_type)?;
 
         match result {
             None => Ok(Value::none()),
@@ -1168,7 +1175,7 @@ impl<'a> ClarityDatabase<'a> {
             variable_name,
         );
 
-        let result = self.get_value(&key, &variable_descriptor.value_type);
+        let result = self.get_value(&key, &variable_descriptor.value_type)?;
 
         match result {
             None => Ok(ValueResult {
@@ -1269,7 +1276,7 @@ impl<'a> ClarityDatabase<'a> {
             ClarityDatabase::make_key_for_data_map_entry(contract_identifier, map_name, key_value);
 
         let stored_type = TypeSignature::new_option(map_descriptor.value_type.clone())?;
-        let result = self.get_value(&key, &stored_type);
+        let result = self.get_value(&key, &stored_type)?;
 
         match result {
             None => Ok(Value::none()),
@@ -1303,7 +1310,7 @@ impl<'a> ClarityDatabase<'a> {
         );
 
         let stored_type = TypeSignature::new_option(map_descriptor.value_type.clone())?;
-        let result = self.get_value(&key, &stored_type);
+        let result = self.get_value(&key, &stored_type)?;
 
         match result {
             None => Ok(ValueResult {
@@ -1383,7 +1390,7 @@ impl<'a> ClarityDatabase<'a> {
     }
 
     fn data_map_entry_exists(&mut self, key: &str, expected_value: &TypeSignature) -> Result<bool> {
-        match self.get_value(key, expected_value) {
+        match self.get_value(key, expected_value)? {
             None => Ok(false),
             Some(value) => Ok(value.value != Value::none()),
         }
