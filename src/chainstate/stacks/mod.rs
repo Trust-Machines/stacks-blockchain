@@ -83,7 +83,7 @@ pub use stacks_common::address::{
 };
 pub use stacks_common::types::chainstate::{StacksPrivateKey, StacksPublicKey};
 
-pub const STACKS_BLOCK_VERSION: u8 = 4;
+pub const STACKS_BLOCK_VERSION: u8 = 6;
 pub const STACKS_BLOCK_VERSION_AST_PRECHECK_SIZE: u8 = 1;
 
 pub const MAX_BLOCK_LEN: u32 = 2 * 1024 * 1024;
