@@ -1,5 +1,6 @@
 use clarity::vm::ast::build_ast;
 use clarity::vm::test_util::{TEST_BURN_STATE_DB, TEST_HEADER_DB};
+use clarity::vm::tests::test_clarity_versions;
 use clarity::vm::types::QualifiedContractIdentifier;
 use clarity::vm::version::ClarityVersion;
 #[cfg(test)]
@@ -12,17 +13,6 @@ use stacks_common::types::StacksEpochId;
 
 use crate::chainstate::stacks::index::ClarityMarfTrieId;
 use crate::clarity_vm::{clarity::ClarityInstance, database::marf::MarfedKV};
-
-#[template]
-#[rstest]
-#[case(ClarityVersion::Clarity1, StacksEpochId::Epoch2_05)]
-#[case(ClarityVersion::Clarity1, StacksEpochId::Epoch21)]
-#[case(ClarityVersion::Clarity2, StacksEpochId::Epoch21)]
-fn test_edge_counting_runtime_template(
-    #[case] version: ClarityVersion,
-    #[case] epoch: StacksEpochId,
-) {
-}
 
 fn dependency_edge_counting_runtime(
     iters: usize,
@@ -71,7 +61,7 @@ fn dependency_edge_counting_runtime(
     cost_track.get_total().runtime
 }
 
-#[apply(test_edge_counting_runtime_template)]
+#[apply(test_clarity_versions)]
 fn test_edge_counting_runtime(#[case] version: ClarityVersion, #[case] epoch: StacksEpochId) {
     let ratio_4_8 = dependency_edge_counting_runtime(8, version, epoch)
         / dependency_edge_counting_runtime(4, version, epoch);

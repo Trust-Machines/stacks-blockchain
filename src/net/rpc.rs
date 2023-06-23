@@ -128,6 +128,9 @@ use crate::net::{RPCNeighbor, RPCNeighborsInfo};
 use crate::util_lib::boot::boot_code_id;
 use crate::util_lib::db::DBConn;
 use crate::util_lib::db::Error as db_error;
+
+use crate::chainstate::stacks::boot::POX_3_NAME;
+
 use crate::{
     chainstate::burn::operations::leader_block_commit::OUTPUTS_PER_COMMIT, types, util,
     util::hash::Sha256Sum, version_string,
@@ -312,6 +315,13 @@ impl RPCPoxInfoData {
             .block_height_to_reward_cycle(burnchain.pox_constants.v1_unlock_height as u64)
             .ok_or(net_error::ChainstateError(
                 "PoX-2 first reward cycle begins before first burn block height".to_string(),
+            ))?
+            + 1;
+
+        let pox_3_first_cycle = burnchain
+            .block_height_to_reward_cycle(burnchain.pox_constants.pox_3_activation_height as u64)
+            .ok_or(net_error::ChainstateError(
+                "PoX-3 first reward cycle begins before first burn block height".to_string(),
             ))?
             + 1;
 
@@ -517,6 +527,14 @@ impl RPCPoxInfoData {
                     activation_burnchain_block_height: burnchain.pox_constants.v1_unlock_height
                         as u64,
                     first_reward_cycle_id: pox_2_first_cycle,
+                },
+                RPCPoxContractVersion {
+                    contract_id: boot_code_id(POX_3_NAME, chainstate.mainnet).to_string(),
+                    activation_burnchain_block_height: burnchain
+                        .pox_constants
+                        .pox_3_activation_height
+                        as u64,
+                    first_reward_cycle_id: pox_3_first_cycle,
                 },
             ],
         })
@@ -1338,6 +1356,7 @@ impl ConversationHttp {
                     let key = ClarityDatabase::make_key_for_account_balance(&account);
                     let burn_block_height = clarity_db.get_current_burnchain_block_height() as u64;
                     let v1_unlock_height = clarity_db.get_v1_unlock_height();
+                    let v2_unlock_height = clarity_db.get_v2_unlock_height();
                     let (balance, balance_proof) = if with_proof {
                         clarity_db
                             .get_with_proof::<STXBalance>(&key)
@@ -1363,10 +1382,16 @@ impl ConversationHttp {
                             .unwrap_or_else(|| (0, None))
                     };
 
-                    let unlocked = balance
-                        .get_available_balance_at_burn_block(burn_block_height, v1_unlock_height);
-                    let (locked, unlock_height) = balance
-                        .get_locked_balance_at_burn_block(burn_block_height, v1_unlock_height);
+                    let unlocked = balance.get_available_balance_at_burn_block(
+                        burn_block_height,
+                        v1_unlock_height,
+                        v2_unlock_height,
+                    );
+                    let (locked, unlock_height) = balance.get_locked_balance_at_burn_block(
+                        burn_block_height,
+                        v1_unlock_height,
+                        v2_unlock_height,
+                    );
 
                     let balance = format!("0x{}", to_hex(&unlocked.to_be_bytes()));
                     let locked = format!("0x{}", to_hex(&locked.to_be_bytes()));
@@ -1419,15 +1444,15 @@ impl ConversationHttp {
                         var_name,
                     );
 
-                    let (value, marf_proof) = if with_proof {
+                    let (value_hex, marf_proof): (String, _) = if with_proof {
                         clarity_db
-                            .get_with_proof::<Value>(&key)
+                            .get_with_proof(&key)
                             .map(|(a, b)| (a, Some(format!("0x{}", to_hex(&b)))))?
                     } else {
-                        clarity_db.get::<Value>(&key).map(|a| (a, None))?
+                        clarity_db.get(&key).map(|a| (a, None))?
                     };
 
-                    let data = format!("0x{}", value.serialize());
+                    let data = format!("0x{}", value_hex);
                     Some(DataVarResponse { data, marf_proof })
                 })
             }) {
@@ -1472,25 +1497,22 @@ impl ConversationHttp {
                         map_name,
                         key,
                     );
-                    let (value, marf_proof) = if with_proof {
+                    let (value_hex, marf_proof): (String, _) = if with_proof {
                         clarity_db
-                            .get_with_proof::<Value>(&key)
+                            .get_with_proof(&key)
                             .map(|(a, b)| (a, Some(format!("0x{}", to_hex(&b)))))
                             .unwrap_or_else(|| {
                                 test_debug!("No value for '{}' in {}", &key, tip);
-                                (Value::none(), Some("".into()))
+                                (Value::none().serialize_to_hex(), Some("".into()))
                             })
                     } else {
-                        clarity_db
-                            .get::<Value>(&key)
-                            .map(|a| (a, None))
-                            .unwrap_or_else(|| {
-                                test_debug!("No value for '{}' in {}", &key, tip);
-                                (Value::none(), None)
-                            })
+                        clarity_db.get(&key).map(|a| (a, None)).unwrap_or_else(|| {
+                            test_debug!("No value for '{}' in {}", &key, tip);
+                            (Value::none().serialize_to_hex(), None)
+                        })
                     };
 
-                    let data = format!("0x{}", value.serialize());
+                    let data = format!("0x{}", value_hex);
                     MapEntryResponse { data, marf_proof }
                 })
             }) {
@@ -1584,7 +1606,7 @@ impl ConversationHttp {
                 response_metadata,
                 CallReadOnlyResponse {
                     okay: true,
-                    result: Some(format!("0x{}", data.serialize())),
+                    result: Some(format!("0x{}", data.serialize_to_hex())),
                     cause: None,
                 },
             ),
@@ -2171,6 +2193,7 @@ impl ConversationHttp {
             } else {
                 match mempool.submit(
                     chainstate,
+                    sortdb,
                     &consensus_hash,
                     &block_hash,
                     &tx,
