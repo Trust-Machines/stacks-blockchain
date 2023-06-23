@@ -45,6 +45,7 @@ use crate::chainstate::stacks::{StacksPrivateKey, StacksPublicKey};
 use crate::codec::{write_next, Error as codec_error, StacksMessageCodec};
 use crate::core::STACKS_EPOCH_2_2_MARKER;
 use crate::core::STACKS_EPOCH_2_3_MARKER;
+use crate::core::STACKS_EPOCH_2_4_MARKER;
 use crate::core::{StacksEpoch, StacksEpochId};
 use crate::core::{STACKS_EPOCH_2_05_MARKER, STACKS_EPOCH_2_1_MARKER};
 use crate::net::Error as net_error;
@@ -758,6 +759,7 @@ impl LeaderBlockCommitOp {
             StacksEpochId::Epoch21 => self.check_epoch_commit_marker(STACKS_EPOCH_2_1_MARKER),
             StacksEpochId::Epoch22 => self.check_epoch_commit_marker(STACKS_EPOCH_2_2_MARKER),
             StacksEpochId::Epoch23 => self.check_epoch_commit_marker(STACKS_EPOCH_2_3_MARKER),
+            StacksEpochId::Epoch24 => self.check_epoch_commit_marker(STACKS_EPOCH_2_4_MARKER),
         }
     }
 
@@ -772,7 +774,10 @@ impl LeaderBlockCommitOp {
     ) -> Result<SortitionId, op_error> {
         let tx_tip = tx.context.chain_tip.clone();
         let intended_sortition = match epoch_id {
-            StacksEpochId::Epoch21 | StacksEpochId::Epoch22 | StacksEpochId::Epoch23 => {
+            StacksEpochId::Epoch21
+            | StacksEpochId::Epoch22
+            | StacksEpochId::Epoch23
+            | StacksEpochId::Epoch24 => {
                 // correct behavior -- uses *sortition height* to find the intended sortition ID
                 let sortition_height = self
                     .block_height
@@ -1769,7 +1774,18 @@ mod tests {
         ];
 
         let burnchain = Burnchain {
-            pox_constants: PoxConstants::new(6, 2, 2, 25, 5, 5000, 10000, u32::MAX, u32::MAX),
+            pox_constants: PoxConstants::new(
+                6,
+                2,
+                2,
+                25,
+                5,
+                5000,
+                10000,
+                u32::MAX,
+                u32::MAX,
+                u32::MAX,
+            ),
             peer_version: 0x012345678,
             network_id: 0x9abcdef0,
             chain_name: "bitcoin".to_string(),
@@ -2302,7 +2318,18 @@ mod tests {
         ];
 
         let burnchain = Burnchain {
-            pox_constants: PoxConstants::new(6, 2, 2, 25, 5, 5000, 10000, u32::MAX, u32::MAX),
+            pox_constants: PoxConstants::new(
+                6,
+                2,
+                2,
+                25,
+                5,
+                5000,
+                10000,
+                u32::MAX,
+                u32::MAX,
+                u32::MAX,
+            ),
             peer_version: 0x012345678,
             network_id: 0x9abcdef0,
             chain_name: "bitcoin".to_string(),
@@ -2992,7 +3019,18 @@ mod tests {
         .unwrap();
 
         let burnchain = Burnchain {
-            pox_constants: PoxConstants::new(6, 2, 2, 25, 5, 5000, 10000, u32::MAX, u32::MAX),
+            pox_constants: PoxConstants::new(
+                6,
+                2,
+                2,
+                25,
+                5,
+                5000,
+                10000,
+                u32::MAX,
+                u32::MAX,
+                u32::MAX,
+            ),
             peer_version: 0x012345678,
             network_id: 0x9abcdef0,
             chain_name: "bitcoin".to_string(),

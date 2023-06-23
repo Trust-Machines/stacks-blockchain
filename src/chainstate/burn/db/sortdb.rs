@@ -606,7 +606,7 @@ impl FromRow<StacksEpoch> for StacksEpoch {
     }
 }
 
-pub const SORTITION_DB_VERSION: &'static str = "7";
+pub const SORTITION_DB_VERSION: &'static str = "8";
 
 const SORTITION_DB_INITIAL_SCHEMA: &'static [&'static str] = &[
     r#"
@@ -815,10 +815,13 @@ const SORTITION_DB_SCHEMA_5: &'static [&'static str] = &[r#"
 const SORTITION_DB_SCHEMA_6: &'static [&'static str] = &[r#"
      DELETE FROM epochs;"#];
 
+const SORTITION_DB_SCHEMA_7: &'static [&'static str] = &[r#"
+     DELETE FROM epochs;"#];
+
 // update this to add new indexes
 const LAST_SORTITION_DB_INDEX: &'static str = "index_peg_out_fulfill_burn_header_hash ";
 
-const SORTITION_DB_SCHEMA_7: &'static [&'static str] = &[
+const SORTITION_DB_SCHEMA_8: &'static [&'static str] = &[
     r#"
     CREATE TABLE peg_in (
         txid TEXT NOT NULL,
@@ -2823,7 +2826,8 @@ impl SortitionDB {
         SortitionDB::apply_schema_4(&db_tx)?;
         SortitionDB::apply_schema_5(&db_tx, epochs_ref)?;
         SortitionDB::apply_schema_6(&db_tx, epochs_ref)?;
-        SortitionDB::apply_schema_7(&db_tx)?;
+        SortitionDB::apply_schema_7(&db_tx, epochs_ref)?;
+        SortitionDB::apply_schema_8(&db_tx)?;
 
         db_tx.instantiate_index()?;
 
@@ -3019,6 +3023,7 @@ impl SortitionDB {
                     || version == "5"
                     || version == "6"
                     || version == "7"
+                    || version == "8"
             }
             StacksEpochId::Epoch2_05 => {
                 version == "2"
@@ -3027,6 +3032,7 @@ impl SortitionDB {
                     || version == "5"
                     || version == "6"
                     || version == "7"
+                    || version == "8"
             }
             StacksEpochId::Epoch21 => {
                 version == "3"
@@ -3034,6 +3040,7 @@ impl SortitionDB {
                     || version == "5"
                     || version == "6"
                     || version == "7"
+                    || version == "8"
             }
             StacksEpochId::Epoch22 => {
                 version == "3"
@@ -3041,6 +3048,7 @@ impl SortitionDB {
                     || version == "5"
                     || version == "6"
                     || version == "7"
+                    || version == "8"
             }
             StacksEpochId::Epoch23 => {
                 version == "3"
@@ -3048,6 +3056,15 @@ impl SortitionDB {
                     || version == "5"
                     || version == "6"
                     || version == "7"
+                    || version == "8"
+            }
+            StacksEpochId::Epoch24 => {
+                version == "3"
+                    || version == "4"
+                    || version == "5"
+                    || version == "6"
+                    || version == "7"
+                    || version == "8"
             }
         }
     }
@@ -3150,14 +3167,29 @@ impl SortitionDB {
         Ok(())
     }
 
-    fn apply_schema_7(tx: &DBTx) -> Result<(), db_error> {
+    fn apply_schema_7(tx: &DBTx, epochs: &[StacksEpoch]) -> Result<(), db_error> {
         for sql_exec in SORTITION_DB_SCHEMA_7 {
+            tx.execute_batch(sql_exec)?;
+        }
+
+        SortitionDB::validate_and_insert_epochs(&tx, epochs)?;
+
+        tx.execute(
+            "INSERT OR REPLACE INTO db_config (version) VALUES (?1)",
+            &["7"],
+        )?;
+
+        Ok(())
+    }
+
+    fn apply_schema_8(tx: &DBTx) -> Result<(), db_error> {
+        for sql_exec in SORTITION_DB_SCHEMA_8 {
             tx.execute_batch(sql_exec)?;
         }
 
         tx.execute(
             "INSERT OR REPLACE INTO db_config (version) VALUES (?1)",
-            &["7"],
+            &["8"],
         )?;
         Ok(())
     }
@@ -3210,7 +3242,11 @@ impl SortitionDB {
                         tx.commit()?;
                     } else if version == "6" {
                         let tx = self.tx_begin()?;
-                        SortitionDB::apply_schema_7(&tx.deref())?;
+                        SortitionDB::apply_schema_7(&tx.deref(), epochs)?;
+                        tx.commit()?;
+                    } else if version == "7" {
+                        let tx = self.tx_begin()?;
+                        SortitionDB::apply_schema_8(&tx.deref())?;
                         tx.commit()?;
                     } else if version == expected_version {
                         return Ok(());
@@ -10059,7 +10095,18 @@ pub mod tests {
 
         fs::create_dir_all(path_root).unwrap();
 
-        let pox_consts = PoxConstants::new(10, 3, 3, 25, 5, u64::MAX, u64::MAX, u32::MAX, u32::MAX);
+        let pox_consts = PoxConstants::new(
+            10,
+            3,
+            3,
+            25,
+            5,
+            u64::MAX,
+            u64::MAX,
+            u32::MAX,
+            u32::MAX,
+            u32::MAX,
+        );
 
         let mut burnchain = Burnchain::regtest(path_root);
         burnchain.pox_constants = pox_consts.clone();

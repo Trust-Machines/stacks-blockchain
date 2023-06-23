@@ -405,12 +405,14 @@ pub fn special_mint_asset_v200(
         env.add_memory(TypeSignature::PrincipalType.size() as u64)?;
         env.add_memory(expected_asset_type.size() as u64)?;
 
+        let epoch = env.epoch().clone();
         env.global_context.database.set_nft_owner(
             &env.contract_context.contract_identifier,
             asset_name,
             &asset,
             to_principal,
             expected_asset_type,
+            &epoch,
         )?;
 
         let asset_identifier = AssetIdentifier {
@@ -468,12 +470,14 @@ pub fn special_mint_asset_v205(
         env.add_memory(TypeSignature::PrincipalType.size() as u64)?;
         env.add_memory(asset_size)?;
 
+        let epoch = env.epoch().clone();
         env.global_context.database.set_nft_owner(
             &env.contract_context.contract_identifier,
             asset_name,
             &asset,
             to_principal,
             expected_asset_type,
+            &epoch,
         )?;
 
         let asset_identifier = AssetIdentifier {
@@ -543,12 +547,14 @@ pub fn special_transfer_asset_v200(
         env.add_memory(TypeSignature::PrincipalType.size() as u64)?;
         env.add_memory(expected_asset_type.size() as u64)?;
 
+        let epoch = env.epoch().clone();
         env.global_context.database.set_nft_owner(
             &env.contract_context.contract_identifier,
             asset_name,
             &asset,
             to_principal,
             expected_asset_type,
+            &epoch,
         )?;
 
         env.global_context.log_asset_transfer(
@@ -629,12 +635,14 @@ pub fn special_transfer_asset_v205(
         env.add_memory(TypeSignature::PrincipalType.size() as u64)?;
         env.add_memory(asset_size)?;
 
+        let epoch = env.epoch().clone();
         env.global_context.database.set_nft_owner(
             &env.contract_context.contract_identifier,
             asset_name,
             &asset,
             to_principal,
             expected_asset_type,
+            &epoch,
         )?;
 
         env.global_context.log_asset_transfer(
@@ -1016,11 +1024,13 @@ pub fn special_burn_asset_v200(
         env.add_memory(TypeSignature::PrincipalType.size() as u64)?;
         env.add_memory(expected_asset_type.size() as u64)?;
 
+        let epoch = env.epoch().clone();
         env.global_context.database.burn_nft(
             &env.contract_context.contract_identifier,
             asset_name,
             &asset,
             expected_asset_type,
+            &epoch,
         )?;
 
         env.global_context.log_asset_transfer(
@@ -1093,11 +1103,13 @@ pub fn special_burn_asset_v205(
         env.add_memory(TypeSignature::PrincipalType.size() as u64)?;
         env.add_memory(asset_size)?;
 
+        let epoch = env.epoch().clone();
         env.global_context.database.burn_nft(
             &env.contract_context.contract_identifier,
             asset_name,
             &asset,
             expected_asset_type,
+            &epoch,
         )?;
 
         env.global_context.log_asset_transfer(

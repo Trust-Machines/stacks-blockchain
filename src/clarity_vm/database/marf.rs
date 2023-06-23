@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use clarity::vm::analysis::AnalysisDatabase;
 use clarity::vm::database::SpecialCaseHandler;
@@ -113,7 +114,7 @@ impl MarfedKV {
         use rand::Rng;
         use stacks_common::util::hash::to_hex;
 
-        let mut path = env::temp_dir();
+        let mut path = PathBuf::from_str("/tmp/stacks-node-tests/unit-tests-marf").unwrap();
         let random_bytes = rand::thread_rng().gen::<[u8; 32]>();
         path.push(to_hex(&random_bytes));
 
