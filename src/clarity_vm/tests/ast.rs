@@ -1,7 +1,7 @@
 use clarity::vm::ast::build_ast;
 use clarity::vm::test_util::{TEST_BURN_STATE_DB, TEST_HEADER_DB};
-use clarity::vm::types::QualifiedContractIdentifier;
 use clarity::vm::tests::test_clarity_versions;
+use clarity::vm::types::QualifiedContractIdentifier;
 use clarity::vm::version::ClarityVersion;
 #[cfg(test)]
 use rstest::rstest;

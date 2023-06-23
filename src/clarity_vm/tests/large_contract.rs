@@ -27,6 +27,7 @@ use clarity::vm::errors::{CheckErrors, Error, RuntimeErrorType};
 use clarity::vm::representations::SymbolicExpression;
 use clarity::vm::test_util::*;
 
+use clarity::vm::tests::test_clarity_versions;
 use clarity::vm::types::{
     OptionalData, PrincipalData, QualifiedContractIdentifier, ResponseData, StandardPrincipalData,
     TypeSignature, Value,
@@ -34,7 +35,6 @@ use clarity::vm::types::{
 use clarity::vm::version::ClarityVersion;
 use clarity::vm::ContractContext;
 use clarity::vm::MAX_CALL_STACK_DEPTH;
-use clarity::vm::tests::test_clarity_versions;
 
 #[cfg(test)]
 use rstest::rstest;

@@ -34,7 +34,6 @@ use crate::vm::types::QualifiedContractIdentifier;
 use crate::vm::variables::NativeVariables;
 use crate::vm::ClarityVersion;
 
-
 /// Checks whether or not a contract only contains arithmetic expressions (for example, defining a
 /// map would not pass this check).
 /// This check is useful in determining the validity of new potential cost functions.

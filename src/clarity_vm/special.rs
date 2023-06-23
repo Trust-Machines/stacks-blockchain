@@ -42,8 +42,8 @@ use stacks_common::util::hash::Hash160;
 
 use crate::chainstate::stacks::address::PoxAddress;
 use crate::core::StacksEpochId;
-use crate::vm::costs::runtime_cost;
 use crate::vm::ast::ASTRules;
+use crate::vm::costs::runtime_cost;
 
 /// Parse the returned value from PoX `stack-stx` and `delegate-stack-stx` functions
 ///  from pox-2.clar or pox-3.clar into a format more readily digestible in rust.

@@ -3296,7 +3296,7 @@ fn test_sbtc_ops() {
         sunset_ht,
         pox_v1_unlock_ht,
         pox_v2_unlock_ht,
-        u32::MAX
+        u32::MAX,
     ));
     let burnchain_conf = get_burnchain(path, pox_consts.clone());
 

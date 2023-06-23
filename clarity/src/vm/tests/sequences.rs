@@ -26,9 +26,9 @@ use stacks_common::types::StacksEpochId;
 
 use crate::vm::errors::{CheckErrors, Error, RuntimeErrorType};
 use crate::vm::tests::test_clarity_versions;
+use crate::vm::types::signatures::ListTypeData;
 use crate::vm::types::signatures::SequenceSubtype::{BufferType, StringType};
 use crate::vm::types::signatures::StringSubtype::ASCII;
-use crate::vm::types::signatures::ListTypeData;
 use crate::vm::types::BufferLength;
 use crate::vm::{execute, execute_v2, ClarityVersion};
 

@@ -22,9 +22,7 @@ use crate::vm::ast::ASTRules;
 use crate::vm::contexts::{Environment, GlobalContext, OwnedEnvironment};
 use crate::vm::errors::{CheckErrors, Error, RuntimeErrorType};
 use crate::vm::execute as vm_execute;
-use crate::vm::tests::{
-    execute, symbols_from_values,
-};
+use crate::vm::tests::{execute, symbols_from_values};
 use crate::vm::types::{
     PrincipalData, QualifiedContractIdentifier, ResponseData, TypeSignature, Value,
 };
