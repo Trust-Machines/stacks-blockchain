@@ -818,7 +818,6 @@ const SORTITION_DB_SCHEMA_6: &'static [&'static str] = &[r#"
 const SORTITION_DB_SCHEMA_7: &'static [&'static str] = &[r#"
      DELETE FROM epochs;"#];
 
-// TODO(3493): Add peg out tables
 const SORTITION_DB_SCHEMA_8: &'static [&'static str] = &[
     r#"
     CREATE TABLE peg_in (
@@ -2828,7 +2827,7 @@ impl SortitionDB {
         SortitionDB::apply_schema_5(&db_tx, epochs_ref)?;
         SortitionDB::apply_schema_6(&db_tx, epochs_ref)?;
         SortitionDB::apply_schema_7(&db_tx, epochs_ref)?;
-        SortitionDB::apply_schema_8(&db_tx, epochs_ref)?;
+        SortitionDB::apply_schema_8(&db_tx)?;
 
         db_tx.instantiate_index()?;
 
@@ -3183,12 +3182,10 @@ impl SortitionDB {
         Ok(())
     }
 
-    fn apply_schema_8(tx: &DBTx, epochs: &[StacksEpoch]) -> Result<(), db_error> {
+    fn apply_schema_8(tx: &DBTx) -> Result<(), db_error> {
         for sql_exec in SORTITION_DB_SCHEMA_8 {
             tx.execute_batch(sql_exec)?;
         }
-
-        SortitionDB::validate_and_insert_epochs(&tx, epochs)?;
 
         tx.execute(
             "INSERT OR REPLACE INTO db_config (version) VALUES (?1)",
@@ -3250,7 +3247,7 @@ impl SortitionDB {
                         tx.commit()?;
                     } else if version == "7" {
                         let tx = self.tx_begin()?;
-                        SortitionDB::apply_schema_8(&tx.deref(), epochs)?;
+                        SortitionDB::apply_schema_8(&tx.deref())?;
                         tx.commit()?;
                     } else if version == expected_version {
                         return Ok(());
