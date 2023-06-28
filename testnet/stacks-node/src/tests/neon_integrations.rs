@@ -10824,19 +10824,6 @@ fn test_submit_and_observe_peg_in_request() {
         vtxindex: 0,
         block_height: 0,
         burn_header_hash: BurnchainHeaderHash([0u8; 32]),
-        recipient_contract_name: None,
-    };
-
-    // Let's send a Peg-in op with a contract principal.
-    let peg_in_op_contract = PegInOp {
-        recipient: receiver_contract_principal,
-        peg_wallet_address,
-        amount: 1337,
-        memo: Vec::new(),
-        txid: Txid([1u8; 32]),
-        vtxindex: 0,
-        block_height: 0,
-        burn_header_hash: BurnchainHeaderHash([0u8; 32]),
     };
 
     let mut miner_signer = Keychain::default(conf.node.seed.clone()).generate_op_signer();
@@ -10909,16 +10896,27 @@ fn test_submit_and_observe_peg_in_request() {
         peg_in_op_contract.peg_wallet_address
     );
 
-    next_block_and_wait(&mut btc_regtest_controller, &blocks_processed);
+    // now test that the responses from the RPC endpoint match the data
+    //  from the DB
 
-    let parsed_peg_in_op_contract = {
-        let sortdb = btc_regtest_controller.sortdb_mut();
-        let tip = SortitionDB::get_canonical_burn_chain_tip(&sortdb.conn()).unwrap();
-        let ops = SortitionDB::get_peg_in_ops(&sortdb.conn(), &tip.burn_header_hash)
-            .expect("Failed to get peg in ops");
-        assert_eq!(ops.len(), 1);
+    let query_height_op_contract = parsed_peg_in_op_contract.block_height;
+    let parsed_resp = get_peg_in_ops(&conf, query_height_op_contract);
 
-        ops.into_iter().next().unwrap()
+    let parsed_peg_in_op_contract = match parsed_resp {
+        BurnchainOps::PegIn(mut vec) => {
+            assert_eq!(vec.len(), 1);
+            vec.pop().unwrap()
+        }
+    };
+
+    let query_height_op_standard = parsed_peg_in_op_standard.block_height;
+    let parsed_resp = get_peg_in_ops(&conf, query_height_op_standard);
+
+    let parsed_peg_in_op_standard = match parsed_resp {
+        BurnchainOps::PegIn(mut vec) => {
+            assert_eq!(vec.len(), 1);
+            vec.pop().unwrap()
+        }
     };
 
     assert_eq!(
