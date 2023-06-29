@@ -39,7 +39,6 @@ use crate::chainstate::burn::operations::*;
 use crate::chainstate::burn::*;
 use crate::chainstate::coordinator::{Error as CoordError, *};
 use crate::chainstate::stacks::address::{PoxAddress, PoxAddressType20, PoxAddressType32};
-use crate::chainstate::stacks::boot::PoxStartCycleInfo;
 use crate::chainstate::stacks::boot::POX_1_NAME;
 use crate::chainstate::stacks::boot::POX_2_NAME;
 use crate::chainstate::stacks::boot::{PoxStartCycleInfo, POX_3_NAME};
@@ -3286,6 +3285,7 @@ fn test_sbtc_ops() {
     let _r = std::fs::remove_dir_all(path);
 
     let pox_v1_unlock_ht = 12;
+    let pox_v2_unlock_ht = u32::MAX;
     let sunset_ht = 8000;
     let pox_consts = Some(PoxConstants::new(
         100,
@@ -3296,6 +3296,8 @@ fn test_sbtc_ops() {
         7010,
         sunset_ht,
         pox_v1_unlock_ht,
+        pox_v2_unlock_ht,
+        u32::MAX,
     ));
     let burnchain_conf = get_burnchain(path, pox_consts.clone());
 
