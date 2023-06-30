@@ -176,6 +176,14 @@ impl<'a> SortitionHandleTx<'a> {
         let txids = state_transition
             .accepted_ops
             .iter()
+            .filter(|op| {
+                !matches!(
+                    op,
+                    BlockstackOperationType::PegIn(_)
+                        | BlockstackOperationType::PegOutRequest(_)
+                        | BlockstackOperationType::PegOutFulfill(_)
+                )
+            })
             .map(|ref op| op.txid())
             .collect();
 
