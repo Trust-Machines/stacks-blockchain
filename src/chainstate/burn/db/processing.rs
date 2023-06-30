@@ -106,6 +106,27 @@ impl<'a> SortitionHandleTx<'a> {
                 );
                 BurnchainError::OpError(e)
             }),
+            BlockstackOperationType::PegIn(ref op) => op.check().map_err(|e| {
+                warn!(
+                    "REJECTED({}) peg in op {} at {},{}: {:?}",
+                    op.block_height, &op.txid, op.block_height, op.vtxindex, &e
+                );
+                BurnchainError::OpError(e)
+            }),
+            BlockstackOperationType::PegOutRequest(ref op) => op.check().map_err(|e| {
+                warn!(
+                    "REJECTED({}) peg out request op {} at {},{}: {:?}",
+                    op.block_height, &op.txid, op.block_height, op.vtxindex, &e
+                );
+                BurnchainError::OpError(e)
+            }),
+            BlockstackOperationType::PegOutFulfill(ref op) => op.check().map_err(|e| {
+                warn!(
+                    "REJECTED({}) peg out fulfill op {} at {},{}: {:?}",
+                    op.block_height, &op.txid, op.block_height, op.vtxindex, &e
+                );
+                BurnchainError::OpError(e)
+            }),
         }
     }
 
@@ -155,6 +176,14 @@ impl<'a> SortitionHandleTx<'a> {
         let txids = state_transition
             .accepted_ops
             .iter()
+            .filter(|op| {
+                !matches!(
+                    op,
+                    BlockstackOperationType::PegIn(_)
+                        | BlockstackOperationType::PegOutRequest(_)
+                        | BlockstackOperationType::PegOutFulfill(_)
+                )
+            })
             .map(|ref op| op.txid())
             .collect();
 
