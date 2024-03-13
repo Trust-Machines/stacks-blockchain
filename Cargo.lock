@@ -4595,9 +4595,8 @@ dependencies = [
 
 [[package]]
 name = "wsts"
-version = "8.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "467aa8e40ed0277d19922fd0e7357c16552cb900e5138f61a48ac23c4b7878e0"
+version = "9.0.0"
+source = "git+https://github.com/stacks-network/wsts.git?branch=signer-trait-persist#6f7736c33b512f92f4ed893e923ef4cd6687e89d"
 dependencies = [
  "aes-gcm 0.10.3",
  "bs58 0.5.0",
