@@ -42,6 +42,7 @@ use wsts::state_machine::coordinator::{
 };
 use wsts::state_machine::signer::Signer as WSTSSigner;
 use wsts::state_machine::{OperationResult, SignError};
+use wsts::traits::Signer as _;
 use wsts::v2;
 
 use crate::client::{retry_with_exponential_backoff, ClientError, StackerDB, StacksClient};
@@ -549,6 +550,7 @@ impl Signer {
             // We have received a message and are in the middle of an operation. Update our state accordingly
             self.update_operation();
         }
+        self.save_signing_round();
         self.send_outbound_messages(signer_outbound_messages);
         self.send_outbound_messages(coordinator_outbound_messages);
     }
@@ -1025,6 +1027,19 @@ impl Signer {
         {
             warn!("{self}: Failed to send block rejection submission to stacker-db: {e:?}");
         }
+    }
+
+    /// Persist state needed to ensure the signer can continue to perform
+    /// DKG and participate in signing rounds accross crashes
+    fn save_signing_round(&self) {
+        let state = self.signing_round.signer.save();
+        todo!();
+    }
+
+    /// Load persisted signing round state to ensure the signer can
+    /// still operate after a restart
+    fn load_signing_round(&mut self) {
+        todo!();
     }
 
     /// Send any operation results across the provided channel

@@ -262,6 +262,8 @@ impl RunLoop {
                         signer.next_signer_slot_ids = new_signer_config.signer_slot_ids.clone();
                     }
                 }
+                // TODO: Load signer if persisted
+
                 self.stacks_signers
                     .insert(reward_index, Signer::from(new_signer_config));
                 debug!("Reward cycle #{reward_cycle} Signer #{signer_id} initialized.");

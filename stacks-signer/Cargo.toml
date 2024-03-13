@@ -46,6 +46,7 @@ url = "2.1.0"
 
 [dev-dependencies]
 clarity = { path = "../clarity", features = ["testing"] }
+polynomial = "0.2.6"
 
 [dependencies.rusqlite]
 version = "=0.24.2"
