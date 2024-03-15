@@ -754,6 +754,44 @@ impl SignerTest {
         ]
     }
 
+    /// Kills the signer runloop at index `signer_idx`
+    ///  and returns the private key of the killed signer.
+    ///
+    /// # Panics
+    /// Panics if `signer_idx` is out of bounds
+    fn stop_signer(&mut self, signer_idx: usize) -> StacksPrivateKey {
+        let running_signer = self.running_signers.remove(signer_idx);
+        self.signer_cmd_senders.remove(signer_idx);
+        self.result_receivers.remove(signer_idx);
+        let signer_key = self.signer_stacks_private_keys.remove(signer_idx);
+
+        running_signer.stop();
+        signer_key
+    }
+
+    /// (Re)starts a new signer runloop with the given private key
+    fn restart_signer(&mut self, signer_private_key: StacksPrivateKey) {
+        let signer_config = build_signer_config_tomls(
+            &[signer_private_key],
+            &self.running_nodes.conf.node.rpc_bind,
+            Some(Duration::from_millis(128)), // Timeout defaults to 5 seconds. Let's override it to 128 milliseconds.
+            &Network::Testnet,
+            "12345", // It worked sir, we have the combination! -Great, what's the combination?
+        )
+        .pop()
+        .unwrap();
+
+        let (cmd_send, cmd_recv) = channel();
+        let (res_send, res_recv) = channel();
+
+        info!("restart signer");
+        let signer = spawn_signer(&signer_config, cmd_recv, res_send);
+
+        self.result_receivers.push(res_recv);
+        self.signer_cmd_senders.push(cmd_send);
+        self.running_signers.push(signer);
+    }
+
     fn shutdown(self) {
         self.running_nodes
             .coord_channel
@@ -1347,5 +1385,72 @@ fn stackerdb_filter_bad_transactions() {
             "Miner included an invalid transaction in the block"
         );
     }
+    signer_test.shutdown();
+}
+
+#[test]
+#[ignore]
+/// Test if signers can be rebooted
+/// TODO: Work on this test
+
+/// Test that signers will be able to continue their operations even if one signer is restarted.
+///
+/// Test Setup:
+/// The test spins up three stacks signers, one miner Nakamoto node, and a corresponding bitcoind.
+/// The stacks node is advanced to epoch 2.5, triggering a DKG round. The stacks node is then advanced
+/// to Epoch 3.0 boundary to allow block signing. It then advances to the prepare phase of the next reward cycle
+/// to enable Nakamoto signers to look at the next signer transactions to compare against a proposed block.
+///
+/// Test Execution:
+/// One Signer is restarted, and the signers with the newly restarted signer proceeds to sign the
+/// next block as per normal operations.
+///
+/// Test Assertion:
+/// Signers are able to sign blocks after a signer restart.
+fn stackerdb_sign_after_signer_reboot() {
+    if env::var("BITCOIND_TEST") != Ok("1".into()) {
+        return;
+    }
+
+    tracing_subscriber::registry()
+        .with(fmt::layer())
+        .with(EnvFilter::from_default_env())
+        .init();
+
+    info!("------------------------- Test Setup -------------------------");
+    let mut signer_test = SignerTest::new(3);
+    let timeout = Duration::from_secs(200);
+    let short_timeout = Duration::from_secs(30);
+
+    let key = signer_test.boot_to_epoch_3(timeout);
+
+    info!("------------------------- Test Mine Block -------------------------");
+
+    signer_test.mine_nakamoto_block(timeout);
+    let proposed_signer_signature_hash = signer_test.wait_for_validate_ok_response(short_timeout);
+    let frost_signatures = signer_test.wait_for_frost_signatures(short_timeout);
+    for signature in &frost_signatures {
+        assert!(
+            signature.verify(&key, proposed_signer_signature_hash.0.as_slice()),
+            "Signature verification failed"
+        );
+    }
+
+    info!("------------------------- Restart one Signer -------------------------");
+    let signer_key = signer_test.stop_signer(2);
+    signer_test.restart_signer(signer_key);
+
+    info!("------------------------- Test Mine Block after restart -------------------------");
+
+    signer_test.mine_nakamoto_block(timeout);
+    let proposed_signer_signature_hash = signer_test.wait_for_validate_ok_response(short_timeout);
+    let frost_signatures = signer_test.wait_for_frost_signatures(short_timeout);
+    for signature in &frost_signatures {
+        assert!(
+            signature.verify(&key, proposed_signer_signature_hash.0.as_slice()),
+            "Signature verification failed"
+        );
+    }
+
     signer_test.shutdown();
 }
