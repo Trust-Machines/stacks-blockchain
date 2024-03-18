@@ -116,6 +116,7 @@ impl SignerTest {
             Some(Duration::from_millis(128)), // Timeout defaults to 5 seconds. Let's override it to 128 milliseconds.
             &Network::Testnet,
             password,
+            3000,
         );
 
         let mut running_signers = Vec::new();
@@ -770,13 +771,14 @@ impl SignerTest {
     }
 
     /// (Re)starts a new signer runloop with the given private key
-    fn restart_signer(&mut self, signer_private_key: StacksPrivateKey) {
+    fn restart_signer(&mut self, signer_idx: usize, signer_private_key: StacksPrivateKey) {
         let signer_config = build_signer_config_tomls(
             &[signer_private_key],
             &self.running_nodes.conf.node.rpc_bind,
             Some(Duration::from_millis(128)), // Timeout defaults to 5 seconds. Let's override it to 128 milliseconds.
             &Network::Testnet,
             "12345", // It worked sir, we have the combination! -Great, what's the combination?
+            3000 + signer_idx,
         )
         .pop()
         .unwrap();
@@ -787,9 +789,9 @@ impl SignerTest {
         info!("restart signer");
         let signer = spawn_signer(&signer_config, cmd_recv, res_send);
 
-        self.result_receivers.push(res_recv);
-        self.signer_cmd_senders.push(cmd_send);
-        self.running_signers.push(signer);
+        self.result_receivers.insert(signer_idx, res_recv);
+        self.signer_cmd_senders.insert(signer_idx, cmd_send);
+        self.running_signers.insert(signer_idx, signer);
     }
 
     fn shutdown(self) {
@@ -1437,8 +1439,8 @@ fn stackerdb_sign_after_signer_reboot() {
     }
 
     info!("------------------------- Restart one Signer -------------------------");
-    let signer_key = signer_test.stop_signer(2);
-    signer_test.restart_signer(signer_key);
+    let signer_key = signer_test.stop_signer(1);
+    signer_test.restart_signer(1, signer_key);
 
     info!("------------------------- Test Mine Block after restart -------------------------");
 

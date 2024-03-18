@@ -357,13 +357,13 @@ pub fn build_signer_config_tomls(
     timeout: Option<Duration>,
     network: &Network,
     password: &str,
+    mut port_start: usize,
 ) -> Vec<String> {
     let mut signer_config_tomls = vec![];
 
-    let mut port = 30000;
     for stacks_private_key in stacks_private_keys {
-        let endpoint = format!("localhost:{}", port);
-        port += 1;
+        let endpoint = format!("localhost:{}", port_start);
+        port_start += 1;
         let stacks_private_key = stacks_private_key.to_hex();
         let mut signer_config_toml = format!(
             r#"
@@ -372,8 +372,8 @@ node_host = "{node_host}"
 endpoint = "{endpoint}"
 network = "{network}"
 auth_password = "{password}"
-db_path = ":memory:"
-"#
+db_path = "/tmp/signer2.sqlite"
+"# // TODO: Set an appropriate `db_path`
         );
 
         if let Some(timeout) = timeout {
@@ -407,7 +407,8 @@ mod tests {
         let network = Network::Testnet;
         let password = "melon";
 
-        let config_tomls = build_signer_config_tomls(&[pk], node_host, None, &network, password);
+        let config_tomls =
+            build_signer_config_tomls(&[pk], node_host, None, &network, password, 3000);
 
         let config =
             RawConfigFile::load_from_str(&config_tomls[0]).expect("Failed to parse config file");
