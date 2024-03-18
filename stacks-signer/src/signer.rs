@@ -230,6 +230,10 @@ impl From<SignerConfig> for Signer {
             .get_signer_state(signer_config.signer_id, signer_config.reward_cycle)
             .expect("Failed to load signer state")
         {
+            debug!(
+                "Reward cycle #{} Signer #{}: Loading signer",
+                signer_config.reward_cycle, signer_config.signer_id
+            );
             signing_round.signer = v2::Signer::load(&state);
         }
 
@@ -559,6 +563,8 @@ impl Signer {
             // We have received a message and are in the middle of an operation. Update our state accordingly
             self.update_operation();
         }
+
+        debug!("{self}: Saving signing round data");
         self.save_signing_round();
         self.send_outbound_messages(signer_outbound_messages);
         self.send_outbound_messages(coordinator_outbound_messages);
