@@ -1439,8 +1439,8 @@ fn stackerdb_sign_after_signer_reboot() {
     }
 
     info!("------------------------- Restart one Signer -------------------------");
-    let signer_key = signer_test.stop_signer(1);
-    signer_test.restart_signer(1, signer_key);
+    let signer_key = signer_test.stop_signer(2);
+    signer_test.restart_signer(2, signer_key);
 
     info!("------------------------- Test Mine Block after restart -------------------------");
 
