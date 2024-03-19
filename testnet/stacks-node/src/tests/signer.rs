@@ -103,6 +103,11 @@ impl SignerTest {
             .map(|_| StacksPrivateKey::new())
             .collect::<Vec<StacksPrivateKey>>();
 
+        debug!(
+            "HERE: Generated signer keys: {:?}",
+            signer_stacks_private_keys
+        );
+
         let (mut naka_conf, _miner_account) = naka_neon_integration_conf(None);
         // So the combination is... one, two, three, four, five? That's the stupidest combination I've ever heard in my life!
         // That's the kind of thing an idiot would have on his luggage!
@@ -118,6 +123,8 @@ impl SignerTest {
             password,
             3000,
         );
+
+        debug!("HERE: Generated signer config tomls: {:?}", signer_configs);
 
         let mut running_signers = Vec::new();
         let mut signer_cmd_senders = Vec::new();
@@ -783,10 +790,12 @@ impl SignerTest {
         .pop()
         .unwrap();
 
+        debug!("HERE: Generated new signer config toml: {}", signer_config);
+
         let (cmd_send, cmd_recv) = channel();
         let (res_send, res_recv) = channel();
 
-        info!("restart signer");
+        info!("Restarting signer");
         let signer = spawn_signer(&signer_config, cmd_recv, res_send);
 
         self.result_receivers.insert(signer_idx, res_recv);
@@ -1440,6 +1449,11 @@ fn stackerdb_sign_after_signer_reboot() {
 
     info!("------------------------- Restart one Signer -------------------------");
     let signer_key = signer_test.stop_signer(2);
+    debug!(
+        "HERE: Removed signer 2 with key: {:?}, {}",
+        signer_key,
+        signer_key.to_hex()
+    );
     signer_test.restart_signer(2, signer_key);
 
     info!("------------------------- Test Mine Block after restart -------------------------");
