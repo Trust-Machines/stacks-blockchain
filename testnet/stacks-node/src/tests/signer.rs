@@ -433,9 +433,10 @@ impl SignerTest {
         debug!("Waiting for frost signatures...");
         let mut results = Vec::new();
         let sign_now = Instant::now();
-        for recv in self.result_receivers.iter() {
+        for (idx, recv) in self.result_receivers.iter().enumerate() {
             let mut frost_signature = None;
             loop {
+                debug!("HERE: Waiting for result receiver {}", idx);
                 let results = recv
                     .recv_timeout(timeout)
                     .expect("failed to recv signature results");
