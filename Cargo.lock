@@ -4597,7 +4597,7 @@ dependencies = [
 [[package]]
 name = "wsts"
 version = "9.0.0"
-source = "git+https://github.com/stacks-network/wsts.git?branch=signer-trait-persist#6f7736c33b512f92f4ed893e923ef4cd6687e89d"
+source = "git+https://github.com/stacks-network/wsts.git?branch=feat/state-machine-persist#55573e0e826073e1763cae2614465c366e21e83b"
 dependencies = [
  "aes-gcm 0.10.3",
  "bs58 0.5.0",

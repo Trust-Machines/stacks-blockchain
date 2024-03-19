@@ -239,6 +239,7 @@ impl From<SignerConfig> for Signer {
 
             // TODO: Clean this up - temporary hack to identify a bug
             coordinator.current_dkg_id = 1;
+            coordinator.current_sign_id = 1; // Second hack
         }
 
         Self {
