@@ -228,7 +228,7 @@ impl From<SignerConfig> for Signer {
         );
 
         if let Some(state) = signer_db
-            .get_signer_state(signer_config.signer_id, signer_config.reward_cycle)
+            .get_signer_state(signer_config.reward_cycle)
             .expect("Failed to load signer state")
         {
             debug!(

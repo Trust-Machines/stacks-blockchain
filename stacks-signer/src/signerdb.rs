@@ -39,10 +39,8 @@ CREATE TABLE IF NOT EXISTS blocks (
 
 const CREATE_SIGNER_STATE_TABLE: &'static str = "
 CREATE TABLE IF NOT EXISTS signer_states (
-    signer_id INTEGER,
-    reward_cycle INTEGER,
-    state TEXT NOT NULL,
-    PRIMARY KEY (signer_id, reward_cycle)
+    reward_cycle INTEGER PRIMARY KEY,
+    state TEXT NOT NULL
 )";
 
 impl SignerDb {
@@ -80,15 +78,11 @@ impl SignerDb {
     }
 
     /// Get the signer state for the provided reward cycle if it exists in the database
-    pub fn get_signer_state(
-        &self,
-        signer_id: u32,
-        reward_cycle: u64,
-    ) -> Result<Option<SignerState>, DBError> {
+    pub fn get_signer_state(&self, reward_cycle: u64) -> Result<Option<SignerState>, DBError> {
         let result: Option<String> = query_row(
             &self.db,
-            "SELECT state FROM signer_states WHERE signer_id = ? AND reward_cycle = ?",
-            &[signer_id.to_string(), reward_cycle.to_string()],
+            "SELECT state FROM signer_states WHERE reward_cycle = ?",
+            &[reward_cycle.to_string()],
         )?;
 
         try_deserialize(result)
@@ -102,21 +96,17 @@ impl SignerDb {
     ) -> Result<(), DBError> {
         let serialized_state = serde_json::to_string(signer_state)?;
         self.db.execute(
-            "INSERT OR REPLACE INTO signer_states (signer_id, reward_cycle, state) VALUES (?1, ?2, ?3)",
-            &[
-                signer_state.id.to_string(),
-                reward_cycle.to_string(),
-                serialized_state,
-            ],
+            "INSERT OR REPLACE INTO signer_states (reward_cycle, state) VALUES (?1, ?2)",
+            &[reward_cycle.to_string(), serialized_state],
         )?;
         Ok(())
     }
 
     /// Delete the signer state for the provided reward cycle and signer ID
-    pub fn delete_signer_state(&self, signer_id: u32, reward_cycle: u64) -> Result<(), DBError> {
+    pub fn delete_signer_state(&self, reward_cycle: u64) -> Result<(), DBError> {
         self.db.execute(
-            "DELETE FROM signer_states WHERE signer_id = ?1 AND reward_cycle = ?2",
-            &[signer_id.to_string(), reward_cycle.to_string()],
+            "DELETE FROM signer_states WHERE reward_cycle = ?",
+            &[reward_cycle.to_string()],
         )?;
 
         Ok(())
@@ -190,9 +180,12 @@ mod tests {
     use stacks_common::bitvec::BitVec;
     use stacks_common::types::chainstate::{ConsensusHash, StacksBlockId, TrieHash};
     use stacks_common::util::secp256k1::MessageSignature;
+    use wsts::common::Nonce;
     use wsts::curve::point::Point;
     use wsts::curve::scalar::Scalar;
     use wsts::traits::PartyState;
+
+    use num_traits::identities::Zero;
 
     use super::*;
 
@@ -229,11 +222,13 @@ mod tests {
         let ps1 = PartyState {
             polynomial: Polynomial::new(vec![1.into(), 2.into(), 3.into()]),
             private_keys: vec![(1, 45.into()), (2, 56.into())],
+            nonce: Nonce::zero(),
         };
 
         let ps2 = PartyState {
             polynomial: Polynomial::new(vec![1.into(), 2.into(), 3.into()]),
             private_keys: vec![(1, 45.into()), (2, 56.into())],
+            nonce: Nonce::zero(),
         };
 
         SignerState {
@@ -336,25 +331,25 @@ mod tests {
             .expect("Failed to insert signer state");
 
         assert_eq!(
-            db.get_signer_state(0, 10)
+            db.get_signer_state(10)
                 .expect("Failed to get signer state")
                 .unwrap()
                 .id,
             state_0.id
         );
         assert_eq!(
-            db.get_signer_state(1, 11)
+            db.get_signer_state(11)
                 .expect("Failed to get signer state")
                 .unwrap()
                 .id,
             state_1.id
         );
         assert!(db
-            .get_signer_state(0, 11)
+            .get_signer_state(12)
             .expect("Failed to get signer state")
             .is_none());
         assert!(db
-            .get_signer_state(1, 10)
+            .get_signer_state(9)
             .expect("Failed to get signer state")
             .is_none());
     }
@@ -372,25 +367,29 @@ mod tests {
         db.insert_signer_state(11, &state_1)
             .expect("Failed to insert signer state");
 
-        db.delete_signer_state(1, 11)
+        db.delete_signer_state(11)
             .expect("Failed to delete signer state");
 
-        db.delete_signer_state(0, 11)
+        db.delete_signer_state(12)
             .expect("Failed to delete signer state");
 
         assert_eq!(
-            db.get_signer_state(0, 10)
+            db.get_signer_state(10)
                 .expect("Failed to get signer state")
                 .unwrap()
                 .id,
             state_0.id
         );
         assert!(db
-            .get_signer_state(1, 11)
+            .get_signer_state(11)
             .expect("Failed to get signer state")
             .is_none());
         assert!(db
-            .get_signer_state(0, 11)
+            .get_signer_state(12)
+            .expect("Failed to get signer state")
+            .is_none());
+        assert!(db
+            .get_signer_state(9)
             .expect("Failed to get signer state")
             .is_none());
     }
