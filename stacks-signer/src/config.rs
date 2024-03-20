@@ -364,6 +364,9 @@ pub fn build_signer_config_tomls(
     for stacks_private_key in stacks_private_keys {
         let endpoint = format!("localhost:{}", port_start);
         port_start += 1;
+
+        let stacks_public_key = StacksPublicKey::from_private(stacks_private_key).to_hex();
+        let db_path = format!("/tmp/signer_{stacks_public_key}.sqlite"); // TODO: Use proper platform-agnostic tempdir
         let stacks_private_key = stacks_private_key.to_hex();
         let mut signer_config_toml = format!(
             r#"
@@ -372,7 +375,7 @@ node_host = "{node_host}"
 endpoint = "{endpoint}"
 network = "{network}"
 auth_password = "{password}"
-db_path = "/tmp/signer2.sqlite"
+db_path = "{db_path}"
 "# // TODO: Set an appropriate `db_path`
         );
 
