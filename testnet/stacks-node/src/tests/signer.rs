@@ -426,7 +426,7 @@ impl SignerTest {
         debug!("Waiting for frost signatures...");
         let mut results = Vec::new();
         let sign_now = Instant::now();
-        for (idx, recv) in self.result_receivers.iter().enumerate() {
+        for recv in self.result_receivers.iter() {
             let mut frost_signature = None;
             loop {
                 let results = match recv.recv_timeout(timeout) {
@@ -460,10 +460,6 @@ impl SignerTest {
                     break;
                 }
             }
-
-            // TODO: Fix this - why do we panic on the same timeout twice?
-            //let frost_signature = frost_signature
-            //    .expect(&format!("Failed to get frost signature within {timeout:?}"));
 
             if let Some(signature) = frost_signature {
                 results.push(signature);
