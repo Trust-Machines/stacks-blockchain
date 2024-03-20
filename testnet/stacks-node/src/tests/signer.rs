@@ -103,11 +103,6 @@ impl SignerTest {
             .map(|_| StacksPrivateKey::new())
             .collect::<Vec<StacksPrivateKey>>();
 
-        debug!(
-            "HERE: Generated signer keys: {:?}",
-            signer_stacks_private_keys
-        );
-
         let (mut naka_conf, _miner_account) = naka_neon_integration_conf(None);
         // So the combination is... one, two, three, four, five? That's the stupidest combination I've ever heard in my life!
         // That's the kind of thing an idiot would have on his luggage!
@@ -123,8 +118,6 @@ impl SignerTest {
             password,
             3000,
         );
-
-        debug!("HERE: Generated signer config tomls: {:?}", signer_configs);
 
         let mut running_signers = Vec::new();
         let mut signer_cmd_senders = Vec::new();
@@ -436,7 +429,6 @@ impl SignerTest {
         for (idx, recv) in self.result_receivers.iter().enumerate() {
             let mut frost_signature = None;
             loop {
-                debug!("HERE: Waiting for result receiver {}", idx);
                 let results = match recv.recv_timeout(timeout) {
                     Ok(res) => res,
                     Err(e) => {
@@ -798,8 +790,6 @@ impl SignerTest {
         )
         .pop()
         .unwrap();
-
-        debug!("HERE: Generated new signer config toml: {}", signer_config);
 
         let (cmd_send, cmd_recv) = channel();
         let (res_send, res_recv) = channel();
