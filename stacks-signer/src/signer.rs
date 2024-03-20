@@ -203,8 +203,7 @@ impl From<SignerConfig> for Signer {
             signer_public_keys: signer_config.signer_entries.signer_public_keys,
         };
 
-        // TODO: Remove this mut
-        let mut coordinator = FireCoordinator::new(coordinator_config);
+        let coordinator = FireCoordinator::new(coordinator_config);
         let coordinator_selector =
             CoordinatorSelector::from(signer_config.signer_entries.public_keys.clone());
 
@@ -236,10 +235,6 @@ impl From<SignerConfig> for Signer {
                 signer_config.reward_cycle, signer_config.signer_id
             );
             signing_round.signer = v2::Signer::load(&state);
-
-            // TODO: Clean this up - temporary hack to identify a bug
-            coordinator.current_dkg_id = 1;
-            coordinator.current_sign_id = 1; // Second hack
         }
 
         Self {
