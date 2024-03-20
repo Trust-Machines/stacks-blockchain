@@ -392,22 +392,11 @@ impl SignerTest {
                     .expect("failed to recv dkg results");
                 for result in results {
                     match result {
-                        OperationResult::Sign(sig) => {
-                            panic!("Received Signature ({},{})", &sig.R, &sig.z);
-                        }
-                        OperationResult::SignTaproot(proof) => {
-                            panic!("Received SchnorrProof ({},{})", &proof.r, &proof.s);
-                        }
-                        OperationResult::DkgError(dkg_error) => {
-                            panic!("Received DkgError {:?}", dkg_error);
-                        }
-                        OperationResult::SignError(sign_error) => {
-                            panic!("Received SignError {}", sign_error);
-                        }
                         OperationResult::Dkg(point) => {
                             info!("Received aggregate_group_key {point}");
                             aggregate_public_key = Some(point);
                         }
+                        other => panic!("{}", operation_panic_message(&other)),
                     }
                 }
                 if aggregate_public_key.is_some() || dkg_now.elapsed() > timeout {
@@ -439,18 +428,7 @@ impl SignerTest {
                             info!("Received Signature ({},{})", &sig.R, &sig.z);
                             frost_signature = Some(sig);
                         }
-                        OperationResult::SignTaproot(proof) => {
-                            panic!("Received SchnorrProof ({},{})", &proof.r, &proof.s);
-                        }
-                        OperationResult::DkgError(dkg_error) => {
-                            panic!("Received DkgError {:?}", dkg_error);
-                        }
-                        OperationResult::SignError(sign_error) => {
-                            panic!("Received SignError {}", sign_error);
-                        }
-                        OperationResult::Dkg(point) => {
-                            panic!("Received aggregate_group_key {point}");
-                        }
+                        other => panic!("{}", operation_panic_message(&other)),
                     }
                 }
                 if frost_signature.is_some() || sign_now.elapsed() > timeout {
@@ -477,22 +455,11 @@ impl SignerTest {
                     .expect("failed to recv signature results");
                 for result in results {
                     match result {
-                        OperationResult::Sign(sig) => {
-                            panic!("Received Signature ({},{})", &sig.R, &sig.z);
-                        }
                         OperationResult::SignTaproot(proof) => {
                             info!("Received SchnorrProof ({},{})", &proof.r, &proof.s);
                             schnorr_proof = Some(proof);
                         }
-                        OperationResult::DkgError(dkg_error) => {
-                            panic!("Received DkgError {:?}", dkg_error);
-                        }
-                        OperationResult::SignError(sign_error) => {
-                            panic!("Received SignError {}", sign_error);
-                        }
-                        OperationResult::Dkg(point) => {
-                            panic!("Received aggregate_group_key {point}");
-                        }
+                        other => panic!("{}", operation_panic_message(&other)),
                     }
                 }
                 if schnorr_proof.is_some() || sign_now.elapsed() > timeout {
@@ -549,18 +516,7 @@ impl SignerTest {
                 info!("Received Signature ({},{})", &sig.R, &sig.z);
                 sig
             }
-            OperationResult::SignTaproot(proof) => {
-                panic!("Received SchnorrProof ({},{})", &proof.r, &proof.s);
-            }
-            OperationResult::DkgError(dkg_error) => {
-                panic!("Received DkgError {:?}", dkg_error);
-            }
-            OperationResult::SignError(sign_error) => {
-                panic!("Received SignError {}", sign_error);
-            }
-            OperationResult::Dkg(point) => {
-                panic!("Received aggregate_group_key {point}");
-            }
+            other => panic!("{}", operation_panic_message(&other)),
         }
     }
 
@@ -1011,6 +967,26 @@ fn next_item_or_timeout<T>(
     }
 
     Ok((res.into_iter().next().unwrap(), recv))
+}
+
+fn operation_panic_message(result: &OperationResult) -> String {
+    match result {
+        OperationResult::Sign(sig) => {
+            format!("Received Signature ({},{})", sig.R, sig.z)
+        }
+        OperationResult::SignTaproot(proof) => {
+            format!("Received SchnorrProof ({},{})", proof.r, proof.s)
+        }
+        OperationResult::DkgError(dkg_error) => {
+            format!("Received DkgError {:?}", dkg_error)
+        }
+        OperationResult::SignError(sign_error) => {
+            format!("Received SignError {}", sign_error)
+        }
+        OperationResult::Dkg(point) => {
+            format!("Received aggregate_group_key {point}")
+        }
+    }
 }
 
 #[test]
