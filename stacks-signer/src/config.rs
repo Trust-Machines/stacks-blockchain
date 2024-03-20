@@ -366,7 +366,9 @@ pub fn build_signer_config_tomls(
         port_start += 1;
 
         let stacks_public_key = StacksPublicKey::from_private(stacks_private_key).to_hex();
-        let db_path = format!("/tmp/signer_{stacks_public_key}.sqlite"); // TODO: Use proper platform-agnostic tempdir
+        let db_path = std::env::temp_dir().join(format!("signer_{stacks_public_key}.sqlite"));
+        let db_path = db_path.display();
+
         let stacks_private_key = stacks_private_key.to_hex();
         let mut signer_config_toml = format!(
             r#"
@@ -376,7 +378,7 @@ endpoint = "{endpoint}"
 network = "{network}"
 auth_password = "{password}"
 db_path = "{db_path}"
-"# // TODO: Set an appropriate `db_path`
+"#
         );
 
         if let Some(timeout) = timeout {

@@ -247,7 +247,10 @@ mod tests {
     }
 
     fn tmp_db_path() -> PathBuf {
-        format!("/tmp/stacks-signer-test-{}.sqlite", rand::random::<u64>()).into()
+        std::env::temp_dir().join(format!(
+            "stacks-signer-test-{}.sqlite",
+            rand::random::<u64>()
+        ))
     }
 
     fn test_basic_signer_db_with_path(db_path: impl AsRef<Path>) {
