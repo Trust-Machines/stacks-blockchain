@@ -1396,23 +1396,20 @@ fn stackerdb_filter_bad_transactions() {
 
 #[test]
 #[ignore]
-/// Test if signers can be rebooted
-/// TODO: Work on this test
-
 /// Test that signers will be able to continue their operations even if one signer is restarted.
 ///
 /// Test Setup:
 /// The test spins up three stacks signers, one miner Nakamoto node, and a corresponding bitcoind.
 /// The stacks node is advanced to epoch 2.5, triggering a DKG round. The stacks node is then advanced
-/// to Epoch 3.0 boundary to allow block signing. It then advances to the prepare phase of the next reward cycle
-/// to enable Nakamoto signers to look at the next signer transactions to compare against a proposed block.
+/// to Epoch 3.0 boundary to allow block signing.
 ///
 /// Test Execution:
-/// One Signer is restarted, and the signers with the newly restarted signer proceeds to sign the
-/// next block as per normal operations.
+/// The signers sign one block as usual.
+/// Then, one of the signers is restarted.
+/// Finally, the signers sign another block with the restarted signer.
 ///
 /// Test Assertion:
-/// Signers are able to sign blocks after a signer restart.
+/// The signers are able to produce a valid signature after one of them is restarted.
 fn stackerdb_sign_after_signer_reboot() {
     if env::var("BITCOIND_TEST") != Ok("1".into()) {
         return;
