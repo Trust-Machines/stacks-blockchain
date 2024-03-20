@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::net::ToSocketAddrs;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::mpsc::{channel, sync_channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use std::{env, thread};
@@ -429,13 +429,10 @@ impl SignerTest {
         for recv in self.result_receivers.iter() {
             let mut frost_signature = None;
             loop {
-                let results = match recv.recv_timeout(timeout) {
-                    Ok(res) => res,
-                    Err(e) => {
-                        error!("failed to recv signature results: {}", e);
-                        break;
-                    }
-                };
+                let results = recv
+                    .recv_timeout(timeout)
+                    .expect("failed to recv signature results");
+
                 for result in results {
                     match result {
                         OperationResult::Sign(sig) => {
@@ -460,10 +457,9 @@ impl SignerTest {
                     break;
                 }
             }
-
-            if let Some(signature) = frost_signature {
-                results.push(signature);
-            }
+            let frost_signature = frost_signature
+                .expect(&format!("Failed to get frost signature within {timeout:?}"));
+            results.push(frost_signature);
         }
         debug!("Finished waiting for frost signatures!");
         results
@@ -510,6 +506,62 @@ impl SignerTest {
         }
         debug!("Finished waiting for taproot signatures!");
         results
+    }
+
+    /// Listens in parallel on all result receivers,
+    /// returning the first operation result from any of them.
+    fn wait_for_at_least_one_frost_signature(&mut self, timeout: Duration) -> Signature {
+        debug!("Waiting for at least one frost signature...");
+
+        let (tx, rx) = sync_channel(self.result_receivers.len());
+
+        self.result_receivers = self
+            .result_receivers
+            .drain(..)
+            .enumerate()
+            .map(|(idx, recv)| {
+                let tx = tx.clone();
+
+                thread::spawn(move || {
+                    let (operation_results, recv) = match next_item_or_timeout(recv, timeout) {
+                        Ok(res_and_recv) => res_and_recv,
+                        Err(recv) => {
+                            debug!("No signature results received for receiver {}", idx);
+                            return recv;
+                        }
+                    };
+
+                    tx.send(operation_results)
+                        .expect("Receiver dropped before this thread could send operation results");
+
+                    recv
+                })
+            })
+            .map(|handle| handle.join().expect("Failed to join receiver thread"))
+            .collect();
+
+        let result = rx
+            .try_recv()
+            .expect("Failed to recieve any signature results");
+
+        match result {
+            OperationResult::Sign(sig) => {
+                info!("Received Signature ({},{})", &sig.R, &sig.z);
+                sig
+            }
+            OperationResult::SignTaproot(proof) => {
+                panic!("Received SchnorrProof ({},{})", &proof.r, &proof.s);
+            }
+            OperationResult::DkgError(dkg_error) => {
+                panic!("Received DkgError {:?}", dkg_error);
+            }
+            OperationResult::SignError(sign_error) => {
+                panic!("Received SignError {}", sign_error);
+            }
+            OperationResult::Dkg(point) => {
+                panic!("Received aggregate_group_key {point}");
+            }
+        }
     }
 
     fn run_until_epoch_3_boundary(&mut self) {
@@ -940,6 +992,25 @@ fn setup_stx_btc_node(
         coord_channel,
         conf: naka_conf,
     }
+}
+
+/// Takes a receiver of Vec<T>, polls it for the next non-empty Vec
+/// and returns the first item of that vec along with the receiver.
+///
+/// Errors and returns the receiver does not receive any messages within `timeout`
+fn next_item_or_timeout<T>(
+    recv: Receiver<Vec<T>>,
+    timeout: Duration,
+) -> Result<(T, Receiver<Vec<T>>), Receiver<Vec<T>>> {
+    let mut res = Vec::new();
+    while res.is_empty() {
+        res = match recv.recv_timeout(timeout) {
+            Ok(res) => res,
+            Err(_e) => return Err(recv),
+        }
+    }
+
+    Ok((res.into_iter().next().unwrap(), recv))
 }
 
 #[test]
@@ -1452,13 +1523,11 @@ fn stackerdb_sign_after_signer_reboot() {
 
     signer_test.mine_nakamoto_block(timeout);
     let proposed_signer_signature_hash = signer_test.wait_for_validate_ok_response(short_timeout);
-    let frost_signatures = signer_test.wait_for_frost_signatures(short_timeout);
-    for signature in &frost_signatures {
-        assert!(
-            signature.verify(&key, proposed_signer_signature_hash.0.as_slice()),
-            "Signature verification failed"
-        );
-    }
+    let frost_signature = signer_test.wait_for_at_least_one_frost_signature(short_timeout);
+    assert!(
+        frost_signature.verify(&key, proposed_signer_signature_hash.0.as_slice()),
+        "Signature verification failed"
+    );
 
     signer_test.shutdown();
 }
