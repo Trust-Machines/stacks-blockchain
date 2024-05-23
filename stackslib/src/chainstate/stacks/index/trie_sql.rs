@@ -220,7 +220,7 @@ pub fn get_block_hash<T: MarfTrieId>(conn: &Connection, local_id: u32) -> Result
     let result = conn
         .query_row(
             "SELECT block_hash FROM marf_data WHERE block_id = ?",
-            &[local_id],
+            [local_id],
             |row| row.get("block_hash"),
         )
         .optional()?;
@@ -236,7 +236,7 @@ pub fn write_trie_blob<T: MarfTrieId>(
     block_hash: &T,
     data: &[u8],
 ) -> Result<u32, Error> {
-    let args: &[&dyn ToSql] = &[block_hash, &data, &0, &0, &0];
+    let args: &[&dyn ToSql] = rusqlite::params![block_hash, data, 0, 0, 0];
     let mut s =
         conn.prepare("INSERT INTO marf_data (block_hash, data, unconfirmed, external_offset, external_length) VALUES (?, ?, ?, ?, ?)")?;
     let block_id = s

@@ -152,7 +152,7 @@ impl SignerDb {
         query_row(
             &self.db,
             "SELECT encrypted_state FROM signer_states WHERE reward_cycle = ?",
-            [u64_to_sql(reward_cycle)?],
+            params![&u64_to_sql(reward_cycle)?],
         )
     }
 
