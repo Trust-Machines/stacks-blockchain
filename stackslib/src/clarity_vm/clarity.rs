@@ -1887,7 +1887,6 @@ mod tests {
     use clarity::vm::database::{ClarityBackingStore, STXBalance};
     use clarity::vm::test_util::{TEST_BURN_STATE_DB, TEST_HEADER_DB};
     use clarity::vm::types::{StandardPrincipalData, Value};
-    use rusqlite::NO_PARAMS;
     use stacks_common::consts::CHAIN_ID_TESTNET;
     use stacks_common::types::chainstate::ConsensusHash;
 
@@ -2245,9 +2244,12 @@ mod tests {
         // sqlite only have entries
         assert_eq!(
             0,
-            sql.query_row::<u32, _, _>("SELECT COUNT(value) FROM data_table", NO_PARAMS, |row| row
-                .get(0))
-                .unwrap()
+            sql.query_row::<u32, _, _>(
+                "SELECT COUNT(value) FROM data_table",
+                rusqlite::params![],
+                |row| row.get(0)
+            )
+            .unwrap()
         );
     }
 
@@ -2285,7 +2287,7 @@ mod tests {
             .sql_conn()
             .query_row::<u32, _, _>(
                 "SELECT COUNT(value) FROM metadata_table",
-                NO_PARAMS,
+                rusqlite::params![],
                 |row| row.get(0),
             )
             .unwrap();
@@ -2394,7 +2396,7 @@ mod tests {
             genesis_metadata_entries,
             sql.query_row::<u32, _, _>(
                 "SELECT COUNT(value) FROM metadata_table",
-                NO_PARAMS,
+                rusqlite::params![],
                 |row| row.get(0)
             )
             .unwrap()

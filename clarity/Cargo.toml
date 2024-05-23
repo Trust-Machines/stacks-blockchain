@@ -37,8 +37,9 @@ version = "1.0"
 features = ["arbitrary_precision", "unbounded_depth"]
 
 [dependencies.rusqlite]
-version = "=0.24.2"
+# version = "=0.24.2"
 optional = true
+version = "=0.30.0"
 features = ["blob", "serde_json", "i128_blob", "bundled", "trace"]
 
 [dependencies.time]
