@@ -21,7 +21,7 @@ use std::path::PathBuf;
 use lazy_static::lazy_static;
 use rusqlite::blob::Blob;
 use rusqlite::types::{FromSql, FromSqlError};
-use rusqlite::{params, Connection, OpenFlags, OptionalExtension, ToSql, NO_PARAMS};
+use rusqlite::{params, Connection, OpenFlags, OptionalExtension, ToSql};
 use stacks_common::types::chainstate::{ConsensusHash, StacksBlockId};
 use stacks_common::util::{get_epoch_time_secs, sleep_ms};
 
@@ -165,7 +165,7 @@ impl<'a> NakamotoStagingBlocksConnRef<'a> {
     /// Returns Ok(false) if not
     pub fn has_any_unprocessed_nakamoto_block(&self) -> Result<bool, ChainstateError> {
         let qry = "SELECT 1 FROM nakamoto_staging_blocks WHERE processed = 0 LIMIT 1";
-        let res: Option<i64> = query_row(self, qry, NO_PARAMS)?;
+        let res: Option<i64> = query_row(self, qry, rusqlite::params![])?;
         Ok(res.is_some())
     }
 
@@ -302,7 +302,7 @@ impl<'a> NakamotoStagingBlocksConnRef<'a> {
                        AND parent.processed = 1
                      ORDER BY child.height ASC";
         self
-            .query_row_and_then(query, NO_PARAMS, |row| {
+            .query_row_and_then(query, rusqlite::params![], |row| {
                 let data: Vec<u8> = row.get("data")?;
                 let block = NakamotoBlock::consensus_deserialize(&mut data.as_slice())?;
                 Ok(Some((
@@ -332,7 +332,7 @@ impl<'a> NakamotoStagingBlocksConnRef<'a> {
                     // _once_, and it will only touch at most one reward cycle's worth of blocks.
                     let sql = "SELECT index_block_hash,parent_block_id FROM nakamoto_staging_blocks WHERE processed = 0 AND orphaned = 0 AND burn_attachable = 1 ORDER BY height ASC";
                     let mut stmt = self.deref().prepare(sql)?;
-                    let mut qry = stmt.query(NO_PARAMS)?;
+                    let mut qry = stmt.query(rusqlite::params![])?;
                     let mut next_nakamoto_block_id = None;
                     while let Some(row) = qry.next()? {
                         let index_block_hash : StacksBlockId = row.get(0)?;
@@ -488,7 +488,7 @@ impl StacksChainState {
         let conn = sqlite_open(path, flags, false)?;
         if !exists {
             for cmd in NAKAMOTO_STAGING_DB_SCHEMA_1.iter() {
-                conn.execute(cmd, NO_PARAMS)?;
+                conn.execute(cmd, rusqlite::params![])?;
             }
         }
         Ok(NakamotoStagingBlocksConn(conn))

@@ -25,7 +25,7 @@ use rand::{thread_rng, Rng, RngCore};
 use rusqlite::types::{FromSql, ToSql};
 use rusqlite::{
     Connection, Error as sqlite_error, OpenFlags, OptionalExtension, Row, Transaction,
-    TransactionBehavior, NO_PARAMS,
+    TransactionBehavior,
 };
 use serde_json::Error as serde_error;
 use stacks_common::types::chainstate::{SortitionId, StacksAddress, StacksBlockId, TrieHash};
@@ -351,7 +351,7 @@ macro_rules! impl_byte_array_from_column {
 fn get_db_path(conn: &Connection) -> Result<String, Error> {
     let sql = "PRAGMA database_list";
     let path: Result<Option<String>, sqlite_error> =
-        conn.query_row_and_then(sql, NO_PARAMS, |row| row.get(2));
+        conn.query_row_and_then(sql, rusqlite::params![], |row| row.get(2));
     match path {
         Ok(Some(path)) => Ok(path),
         Ok(None) => Ok("<unknown>".to_string()),
@@ -553,7 +553,7 @@ fn inner_sql_pragma(
 
 /// Run a VACUUM command
 pub fn sql_vacuum(conn: &Connection) -> Result<(), Error> {
-    conn.execute("VACUUM", NO_PARAMS)
+    conn.execute("VACUUM", rusqlite::params![])
         .map_err(Error::SqliteError)
         .and_then(|_| Ok(()))
 }
@@ -858,7 +858,7 @@ impl<'a, C: Clone, T: MarfTrieId> IndexDBTx<'a, C, T> {
             PRIMARY KEY(value_hash)
         );
         "#,
-                NO_PARAMS,
+                rusqlite::params![],
             )
             .map_err(Error::SqliteError)?;
         Ok(())
