@@ -2966,7 +2966,7 @@ impl SortitionDB {
         height: u64,
     ) -> Result<Vec<BlockSnapshot>, db_error> {
         let qry = "SELECT * FROM snapshots WHERE block_height = ?1";
-        query_rows(conn, qry, &[u64_to_sql(height)?])
+        query_rows(conn, qry, [u64_to_sql(height)?])
     }
 
     /// Get all preprocessed reward sets and their associated anchor blocks

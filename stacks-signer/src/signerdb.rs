@@ -89,7 +89,7 @@ impl SignerDb {
         let result: Option<String> = query_row(
             &self.db,
             "SELECT state FROM signer_states WHERE reward_cycle = ?",
-            &[u64_to_sql(reward_cycle)?],
+            params![&u64_to_sql(reward_cycle)?],
         )?;
 
         try_deserialize(result)

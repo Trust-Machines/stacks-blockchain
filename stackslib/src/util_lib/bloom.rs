@@ -382,7 +382,7 @@ impl<H: BloomHash + Clone + StacksMessageCodec> BloomCounter<H> {
         let sql = format!("SELECT rowid,* FROM {}", table_name);
         let result = conn.query_row_and_then(&sql, rusqlite::params![], |row| {
             let mut hasher_blob = row
-                .get_raw("hasher")
+                .get_ref_unwrap("hasher")
                 .as_blob()
                 .expect("Unable to read hasher as blob");
             let hasher =
