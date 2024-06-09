@@ -308,7 +308,7 @@ impl BlockMinerThread {
                 ))
             })?;
 
-        let reward_cycle = self
+        let _reward_cycle = self
             .burnchain
             .pox_constants
             .block_height_to_reward_cycle(

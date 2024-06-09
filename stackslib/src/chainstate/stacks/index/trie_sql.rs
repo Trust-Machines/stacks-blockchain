@@ -266,7 +266,7 @@ fn inner_write_external_trie_blob<T: MarfTrieId>(
         let args: &[&dyn ToSql] = &[
             block_hash,
             &empty_blob,
-            &0,
+            &0i64,
             &u64_to_sql(offset)?,
             &u64_to_sql(length)?,
             &block_id,
@@ -286,7 +286,7 @@ fn inner_write_external_trie_blob<T: MarfTrieId>(
         let args: &[&dyn ToSql] = &[
             block_hash,
             &empty_blob,
-            &0,
+            &0i64,
             &u64_to_sql(offset)?,
             &u64_to_sql(length)?,
         ];
@@ -378,7 +378,7 @@ pub fn write_trie_blob_to_unconfirmed<T: MarfTrieId>(
             .expect("EXHAUSTION: MARF cannot track more than 2**31 - 1 blocks");
     } else {
         // doesn't exist yet; insert
-        let args: &[&dyn ToSql] = &[block_hash, &data, &1];
+        let args: &[&dyn ToSql] = &[block_hash, &data, &1i64];
         let mut s =
             conn.prepare("INSERT INTO marf_data (block_hash, data, unconfirmed, external_offset, external_length) VALUES (?, ?, ?, 0, 0)")?;
         s.execute(args)
@@ -429,7 +429,7 @@ pub fn read_all_block_hashes_and_roots<T: MarfTrieId>(
     let rows = s.query_and_then(rusqlite::params![], |row| {
         let block_hash: T = row.get_unwrap("block_hash");
         let data = row
-            .get_raw("data")
+            .get_ref("data")?
             .as_blob()
             .expect("DB Corruption: MARF data is non-blob");
         let start = TrieStorageConnection::<T>::root_ptr_disk() as usize;

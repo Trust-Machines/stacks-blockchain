@@ -1559,7 +1559,7 @@ impl StacksChainState {
         let index_block_hash =
             StacksBlockHeader::make_index_block_hash(&consensus_hash, &block_hash);
 
-        let attachable = {
+        let attachable: i64 = {
             // if this block has an unprocessed staging parent, then it's not attachable until its parent is.
             let has_unprocessed_parent_sql = "SELECT anchored_block_hash FROM staging_blocks WHERE anchored_block_hash = ?1 AND consensus_hash = ?2 AND processed = 0 AND orphaned = 0 LIMIT 1";
             let has_parent_sql = "SELECT anchored_block_hash FROM staging_blocks WHERE anchored_block_hash = ?1 AND consensus_hash = ?2 LIMIT 1";
@@ -1625,13 +1625,13 @@ impl StacksChainState {
             &block.header.microblock_pubkey_hash,
             &u64_to_sql(block.header.total_work.work)?,
             &attachable,
-            &0,
-            &0,
+            &0i64,
+            &0i64,
             &u64_to_sql(commit_burn)?,
             &u64_to_sql(sortition_burn)?,
             &index_block_hash,
             &u64_to_sql(get_epoch_time_secs())?,
-            &0,
+            &0i64,
             &u64_to_sql(download_time)?,
         ];
 
@@ -1696,8 +1696,8 @@ impl StacksChainState {
             &microblock.header.prev_block,
             &index_microblock_hash,
             &microblock.header.sequence,
-            &0,
-            &0,
+            &0i64,
+            &0i64,
         ];
 
         tx.execute(&sql, args)

@@ -1918,7 +1918,7 @@ impl MemPoolDB {
 
         debug!(
             "Mempool iteration finished";
-            "considered_txs" => total_considered,
+            "considered_txs" => %total_considered,
             "elapsed_ms" => start_time.elapsed().as_millis()
         );
         Ok(total_considered)
